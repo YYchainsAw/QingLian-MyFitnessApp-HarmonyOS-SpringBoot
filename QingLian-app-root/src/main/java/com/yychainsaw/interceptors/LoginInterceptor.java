@@ -31,6 +31,12 @@ public class LoginInterceptor implements HandlerInterceptor {
 
             Map<String, Object> claims = JwtUtil.parseToken(token);
             ThreadLocalUtil.set(claims);
+
+            Object userId = claims.get("id");
+            if (userId != null) {
+                request.setAttribute("id", String.valueOf(userId));
+            }
+
             return true;
         } catch (Exception e) {
             response.setStatus(401);

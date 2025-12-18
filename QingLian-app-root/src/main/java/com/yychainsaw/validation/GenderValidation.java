@@ -10,6 +10,6 @@ public class GenderValidation implements ConstraintValidator<Gender, String> {
     public boolean isValid(String value, ConstraintValidatorContext context) {
         if (value == null) return false;
 
-        return value.equals("男") || value.equals("女");
+        return value.equals("MALE") || value.equals("FEMALE") || value.equals("OTHER");
     }
 }
