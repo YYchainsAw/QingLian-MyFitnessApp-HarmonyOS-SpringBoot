@@ -1,13 +1,10 @@
 package com.yychainsaw.pojo.entity;
 
+import com.baomidou.mybatisplus.annotation.*;
 import com.yychainsaw.anno.Gender;
-import jakarta.persistence.*;
-import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -16,56 +13,37 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@Table(name = "users")
+@TableName("users")
 public class User {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "user_id")
+    @TableId(value = "user_id", type = IdType.NONE)
     private UUID userId;
-
-    @NotEmpty
-    @Column(nullable = false, unique = true)
     private String username;
-
-    @NotEmpty
-    @Column(name = "password_hash", nullable = false)
+    @TableField("password_hash") // 指定数据库字段名
     private String passwordHash;
-
-    @NotEmpty
     private String nickname;
-
-    @Column(name = "avatar_url")
+    @TableField("avatar_url")
     private String avatarUrl;
-
     @Gender
     private String gender;
-
-    @Column(name = "height_cm")
+    @TableField("height_cm")
     private Integer height;
-
-    @Column(name = "weight_kg")
+    @TableField("weight_kg")
     private BigDecimal weight;
-
-    @Column(name = "last_login_time")
+    @TableField("last_login_time")
     private LocalDateTime lastLoginTime;
-
-    @CreationTimestamp // Hibernate 自动管理创建时间
-    @Column(name = "created_at", updatable = false)
+    @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
-
-    @UpdateTimestamp // Hibernate 自动管理更新时间
-    @Column(name = "updated_at")
+    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
 
-    // --- 统计数据 (非数据库表字段，必须加 @Transient) ---
-    @Transient
+
+    @TableField(exist = false)
     private Long followers;
-    @Transient
+    @TableField(exist = false)
     private Long following;
-    @Transient
+    @TableField(exist = false)
     private Long totalMinutes;
-    @Transient
+    @TableField(exist = false)
     private Long totalCalories;
 }

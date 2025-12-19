@@ -1,33 +1,29 @@
 package com.yychainsaw.pojo.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
-@Entity
-@Table(name = "messages")
+@TableName("messages")
 public class Message {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "msg_id")
+
+    @TableId(value = "msg_id", type = IdType.AUTO)
     private Long msgId;
 
-    @Column(name = "sender_id")
+    @TableField("sender_id")
     private UUID senderId;
 
-    @Column(name = "receiver_id")
+    @TableField("receiver_id")
     private UUID receiverId;
 
     private String content;
 
-    @Column(name = "is_read")
+    @TableField("is_read")
     private Boolean isRead;
 
-    @CreationTimestamp
-    @Column(name = "sent_at", updatable = false)
+    @TableField(value = "sent_at", fill = FieldFill.INSERT)
     private LocalDateTime sentAt;
 }

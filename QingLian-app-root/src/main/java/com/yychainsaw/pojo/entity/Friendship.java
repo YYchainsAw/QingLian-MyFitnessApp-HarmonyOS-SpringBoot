@@ -1,29 +1,27 @@
 package com.yychainsaw.pojo.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
-@Entity
-@Table(name = "friendships")
-@IdClass(FriendshipId.class) // 指定复合主键类
+@TableName("friendships")
 public class Friendship {
 
-    @Id
-    @Column(name = "user_id")
+    // 复合主键在 MP 中通常不加 @TableId，直接作为普通字段处理
+    // 操作时使用 wrapper.eq("user_id", uid).eq("friend_id", fid)
+    @TableField("user_id")
     private UUID userId;
 
-    @Id
-    @Column(name = "friend_id")
+    @TableField("friend_id")
     private UUID friendId;
 
     private String status;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 }

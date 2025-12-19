@@ -1,45 +1,37 @@
 package com.yychainsaw.pojo.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
-@Entity
-@Table(name = "plans")
+@TableName("plans")
 public class Plan {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "plan_id")
+
+    @TableId(value = "plan_id", type = IdType.AUTO)
     private Long planId;
 
-    @Column(name = "user_id")
-    private UUID userId; // 外键关联 User，使用 UUID
+    @TableField("user_id")
+    private UUID userId;
 
-    @Column(nullable = false)
     private String title;
 
     private String description;
 
-    @Column(name = "start_date")
+    @TableField("start_date")
     private LocalDate startDate;
 
-    @Column(name = "end_date")
+    @TableField("end_date")
     private LocalDate endDate;
 
     private String status;
 
-    // 建议加上时间戳
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
-    @Column(name = "updated_at")
+    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
 }

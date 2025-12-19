@@ -1,38 +1,32 @@
 package com.yychainsaw.pojo.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 @Data
-@Entity
-@Table(name = "posts")
+@TableName(value = "posts", autoResultMap = true) // autoResultMap 必须开启，否则 TypeHandler 不生效
 public class Post {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "post_id")
+
+    @TableId(value = "post_id", type = IdType.AUTO)
     private Long postId;
 
-    @Column(name = "user_id")
+    @TableField("user_id")
     private UUID userId;
 
     private String content;
 
-    // 映射 Postgres 的 text[] 数组
-    @Column(name = "image_urls", columnDefinition = "text[]")
-    @JdbcTypeCode(SqlTypes.ARRAY)
+    // 使用 JacksonTypeHandler 自动将 List<String> 转为 JSON 字符串存入数据库
+    @TableField(value = "image_urls", typeHandler = JacksonTypeHandler.class)
     private List<String> imageUrls;
 
-    @Column(name = "likes_count")
+    @TableField("likes_count")
     private Integer likesCount;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 }

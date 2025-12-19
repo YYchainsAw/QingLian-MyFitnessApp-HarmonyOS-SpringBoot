@@ -1,35 +1,31 @@
 package com.yychainsaw.pojo.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
-@Entity
-@Table(name = "workout_records")
+@TableName("workout_records")
 public class WorkoutRecord {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "record_id")
+
+    @TableId(value = "record_id", type = IdType.AUTO)
     private Long recordId;
 
-    @Column(name = "user_id")
+    @TableField("user_id")
     private UUID userId;
 
-    @Column(name = "plan_id")
+    @TableField("plan_id")
     private Long planId;
 
-    @Column(name = "duration_seconds")
+    @TableField("duration_seconds")
     private Integer durationSeconds;
 
-    @Column(name = "calories_burned")
+    @TableField("calories_burned")
     private Integer caloriesBurned;
 
-    @CreationTimestamp
-    @Column(name = "workout_date")
+    @TableField(value = "workout_date", fill = FieldFill.INSERT)
     private LocalDateTime workoutDate;
 
     private String notes;
