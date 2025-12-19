@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -81,5 +83,24 @@ public class UserServiceImpl implements UserService {
         user.setLastLoginTime(LocalDateTime.now());
         // 只更新 lastLoginTime 字段，其他字段不变
         userMapper.updateById(user);
+    }
+
+    @Override
+    public List<UserVO> searchUsers(String keyword) {
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.like(User::getNickname, keyword) // 匹配昵称
+                .or()
+                .like(User::getUsername, keyword) // 优化：通常用户也希望搜到用户名
+                .select(User::getUserId, User::getUsername, User::getNickname, User::getAvatarUrl) // 优化：只查询需要的字段
+                .last("LIMIT 20"); // 优化：限制最大返回条数，保护数据库
+
+        List<User> users = userMapper.selectList(queryWrapper);
+
+        // 转换为 VO
+        return users.stream().map(user -> {
+            UserVO vo = new UserVO();
+            BeanUtils.copyProperties(user, vo);
+            return vo;
+        }).collect(Collectors.toList());
     }
 }

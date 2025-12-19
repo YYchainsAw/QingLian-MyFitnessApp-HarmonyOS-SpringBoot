@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -38,5 +40,20 @@ public class UserController {
         UUID userId = UUID.fromString(userIdStr);
         userService.deleteUser(userId);
         return Result.success();
+    }
+
+    /**
+     * 操作 10: 查找昵称中包含特定关键字的用户
+     * 优化：
+     * 1. 校验 keyword 是否为空
+     * 2. 逻辑下沉到 Service
+     */
+    @GetMapping("/search")
+    public Result<List<UserVO>> searchUsers(@RequestParam String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return Result.success(Collections.emptyList());
+        }
+        List<UserVO> users = userService.searchUsers(keyword.trim());
+        return Result.success(users);
     }
 }
