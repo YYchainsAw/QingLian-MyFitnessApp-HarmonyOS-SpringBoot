@@ -1,11 +1,10 @@
 package com.yychainsaw.pojo.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.yychainsaw.config.StringArrayTypeHandler;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -20,13 +19,17 @@ public class Post {
 
     private String content;
 
-    // 使用 JacksonTypeHandler 自动将 List<String> 转为 JSON 字符串存入数据库
-    @TableField(value = "image_urls", typeHandler = JacksonTypeHandler.class)
-    private List<String> imageUrls;
+    // 修改点：类型改为 String[]，Handler 改为 StringArrayTypeHandler
+    @TableField(value = "image_urls", typeHandler = StringArrayTypeHandler.class)
+    private String[] imageUrls;
 
     @TableField("likes_count")
     private Integer likesCount;
 
     @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
+
+    // 建议补充：帖子内容修改时需要更新时间
+    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedAt;
 }

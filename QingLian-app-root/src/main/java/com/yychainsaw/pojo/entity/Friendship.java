@@ -24,4 +24,8 @@ public class Friendship {
 
     @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
+
+    // 新增：记录状态变更时间（如接受好友请求的时间）
+    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedAt;
 }

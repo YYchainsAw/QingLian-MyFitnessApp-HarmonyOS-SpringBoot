@@ -1,10 +1,10 @@
 package com.yychainsaw.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.yychainsaw.pojo.entity.User;
+import com.yychainsaw.pojo.entity.Plan;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-public interface UserMapper extends BaseMapper<User> {
+public interface PlanMapper extends BaseMapper<Plan> {
 
 }
