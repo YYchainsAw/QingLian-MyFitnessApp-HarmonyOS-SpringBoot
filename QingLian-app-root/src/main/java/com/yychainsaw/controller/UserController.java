@@ -49,7 +49,7 @@ public class UserController {
      * 2. 逻辑下沉到 Service
      */
     @GetMapping("/search")
-    public Result<List<UserVO>> searchUsers(@RequestParam String keyword) {
+    public Result<List<UserVO>> searchUsers(@RequestParam(required = false) String keyword) {
         if (keyword == null || keyword.trim().isEmpty()) {
             return Result.success(Collections.emptyList());
         }
