@@ -1,6 +1,7 @@
 package com.yychainsaw.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.yychainsaw.mapper.FriendshipMapper;
 import com.yychainsaw.mapper.MessageMapper;
 import com.yychainsaw.mapper.PlanMapper;
@@ -14,8 +15,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class PlanServiceImpl implements PlanService {
@@ -69,5 +74,35 @@ public class PlanServiceImpl implements PlanService {
             // sent_at 由 MyBatis-Plus 自动填充
             messageMapper.insert(msg);
         }
+    }
+
+    @Override
+    public List<Map<String, Object>> getActivePlans(UUID userId) {
+        // SQL #8
+        QueryWrapper<Plan> wrapper = new QueryWrapper<>();
+        wrapper.eq("user_id", userId)
+                .eq("status", "ACTIVE")
+                .ge("end_date", LocalDate.now());
+
+        List<Plan> plans = planMapper.selectList(wrapper);
+
+        // 简单转 Map，实际建议用 BeanUtils 转 VO
+        return plans.stream().map(p -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("planId", p.getPlanId());
+            map.put("title", p.getTitle());
+            map.put("status", p.getStatus());
+            map.put("endDate", p.getEndDate());
+            return map;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public void completePlan(Long planId) {
+        // SQL #9
+        Plan plan = new Plan();
+        plan.setPlanId(planId);
+        plan.setStatus("COMPLETED");
+        planMapper.updateById(plan);
     }
 }

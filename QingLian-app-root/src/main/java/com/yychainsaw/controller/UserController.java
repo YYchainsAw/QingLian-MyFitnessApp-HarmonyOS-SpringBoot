@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -56,4 +57,15 @@ public class UserController {
         List<UserVO> users = userService.searchUsers(keyword.trim());
         return Result.success(users);
     }
+
+    // SQL #12: 用户的社交概览 (Dashboard)
+    // GET /user/dashboard
+    @GetMapping("/dashboard")
+    public Result<Map<String, Object>> getSocialDashboard(@RequestAttribute("id") String userIdStr) {
+        // 返回包含 friend_count, unread_msg_count, active_plan_count 的 Map
+        Map<String, Object> dashboard = userService.getUserSocialDashboard(UUID.fromString(userIdStr));
+        return Result.success(dashboard);
+    }
+
+
 }

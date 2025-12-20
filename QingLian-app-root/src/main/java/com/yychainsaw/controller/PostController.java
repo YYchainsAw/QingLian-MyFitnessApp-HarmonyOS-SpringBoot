@@ -5,6 +5,7 @@ import com.yychainsaw.pojo.dto.PostCreateDTO;
 import com.yychainsaw.pojo.dto.Result;
 import com.yychainsaw.pojo.vo.PostVO;
 import com.yychainsaw.service.PostService;
+import com.yychainsaw.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,8 @@ public class PostController {
 
     @Autowired
     private PostService postService;
+    @Autowired
+    private UserService userService;
 
     // 操作 2: 发布帖子 (包含防刷帖和VIP赞逻辑)
     @PostMapping("/posts")
@@ -65,6 +68,7 @@ public class PostController {
     // 操作 15: 数据统计 (后台用)
     @GetMapping("/stats/gender-weight")
     public Result<List<Map<String, Object>>> getStats() {
-        return Result.success(postService.getStats());
+        List<Map<String, Object>> stats = userService.getGenderWeightStats();
+        return Result.success(stats);
     }
 }

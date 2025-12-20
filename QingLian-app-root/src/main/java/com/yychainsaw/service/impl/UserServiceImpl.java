@@ -1,6 +1,7 @@
 package com.yychainsaw.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.yychainsaw.mapper.UserMapper;
 import com.yychainsaw.pojo.dto.UserUpdateDTO;
 import com.yychainsaw.pojo.entity.User;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -103,4 +105,20 @@ public class UserServiceImpl implements UserService {
             return vo;
         }).collect(Collectors.toList());
     }
+
+    @Override
+    public List<Map<String, Object>> getGenderWeightStats() {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.select("gender", "count(*) as count", "avg(weight) as totalWeight")
+                    .groupBy("gender")
+                    .isNotNull("gender");
+
+        return userMapper.selectMaps(queryWrapper);
+    }
+
+    @Override
+    public Map<String, Object> getUserSocialDashboard(UUID userId) {
+        return userMapper.selectUserSocialDashboard(userId);
+    }
+
 }

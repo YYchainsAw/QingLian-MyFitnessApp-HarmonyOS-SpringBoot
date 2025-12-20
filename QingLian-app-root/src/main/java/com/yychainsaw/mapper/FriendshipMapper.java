@@ -17,4 +17,14 @@ public interface FriendshipMapper extends BaseMapper<Friendship> {
             "JOIN plans p ON u.user_id = p.user_id " +
             "WHERE f.user_id = #{userId} AND f.status = 'ACCEPTED' AND p.status = 'ACTIVE'")
     List<Map<String, Object>> selectFriendsActivePlans(UUID userId);
+
+    // 新增：活跃度排行榜 (SQL #15)
+    @Select("SELECT u.username, COUNT(wr.record_id) AS total_workouts, MAX(wr.workout_date) AS last_workout " +
+            "FROM users u " +
+            "JOIN friendships f ON u.user_id = f.friend_id " +
+            "JOIN workout_records wr ON u.user_id = wr.user_id " +
+            "WHERE f.user_id = #{userId} AND f.status = 'ACCEPTED' " +
+            "GROUP BY u.user_id, u.username " +
+            "ORDER BY total_workouts DESC LIMIT 5")
+    List<Map<String, Object>> selectFriendRankings(UUID userId);
 }

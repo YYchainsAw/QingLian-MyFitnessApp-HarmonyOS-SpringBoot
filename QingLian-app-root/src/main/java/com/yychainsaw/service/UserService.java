@@ -5,6 +5,7 @@ import com.yychainsaw.pojo.entity.User;
 import com.yychainsaw.pojo.vo.UserVO;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public interface UserService {
@@ -15,4 +16,7 @@ public interface UserService {
     void deleteUser(UUID userId);
     void updateLastLoginTime(UUID userId);
     List<UserVO> searchUsers(String trim);
+    List<Map<String, Object>> getGenderWeightStats();
+    Map<String, Object> getUserSocialDashboard(UUID uuid);
+
 }

@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -29,6 +31,24 @@ public class PlanController {
         planService.createPlanAndNotifyFriends(userId, dto);
 
         // 3. 返回成功响应
+        return Result.success();
+    }
+
+
+    // SQL #8: 查询用户的活跃计划
+    // GET /plans/active
+    @GetMapping("/active")
+    public Result<List<Map<String, Object>>> getActivePlans(@RequestAttribute("id") String userIdStr) {
+        // 这里的返回值建议封装为 PlanVO，这里暂时用 Map 对应 SQL 结果
+        List<Map<String, Object>> plans = planService.getActivePlans(UUID.fromString(userIdStr));
+        return Result.success(plans);
+    }
+
+    // SQL #9: 修改计划状态为完成
+    // PUT /plans/{planId}/complete
+    @PutMapping("/{planId}/complete")
+    public Result completePlan(@PathVariable Long planId) {
+        planService.completePlan(planId);
         return Result.success();
     }
 }
