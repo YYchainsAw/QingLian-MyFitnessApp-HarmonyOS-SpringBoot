@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yychainsaw.mapper.MessageMapper">
+
+    <select id="selectChatHistory" resultType="com.yychainsaw.pojo.entity.Message">
+        SELECT * FROM messages
+        WHERE (sender_id = #{userId} AND receiver_id = #{friendId})
+           OR (sender_id = #{friendId} AND receiver_id = #{userId})
+        ORDER BY sent_at DESC LIMIT 10
+    </select>
+
+
+</mapper>

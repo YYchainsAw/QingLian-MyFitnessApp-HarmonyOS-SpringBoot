@@ -2,6 +2,7 @@ package com.yychainsaw.controller;
 
 import com.yychainsaw.pojo.dto.Result;
 import com.yychainsaw.pojo.dto.UserUpdateDTO;
+import com.yychainsaw.pojo.vo.UserSocialDashboardVO;
 import com.yychainsaw.pojo.vo.UserVO;
 import com.yychainsaw.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,8 +57,8 @@ public class UserController {
     // SQL #12: 用户的社交概览 (Dashboard)
     // GET /user/dashboard
     @GetMapping("/dashboard")
-    public Result<Map<String, Object>> getSocialDashboard() {
-        Map<String, Object> dashboard = userService.getUserSocialDashboard();
+    public Result<UserSocialDashboardVO> getSocialDashboard() {
+        UserSocialDashboardVO dashboard = userService.getUserSocialDashboard();
         return Result.success(dashboard);
     }
 

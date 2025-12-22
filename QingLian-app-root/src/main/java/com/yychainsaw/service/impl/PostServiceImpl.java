@@ -8,7 +8,10 @@ import com.yychainsaw.pojo.dto.PostCreateDTO;
 import com.yychainsaw.pojo.dto.PostUpdateDTO;
 import com.yychainsaw.pojo.entity.Post;
 import com.yychainsaw.pojo.entity.User;
+import com.yychainsaw.pojo.vo.GenderStatVO;
+import com.yychainsaw.pojo.vo.InfluencerVO;
 import com.yychainsaw.pojo.vo.PostVO;
+import com.yychainsaw.pojo.vo.PotentialFriendVO;
 import com.yychainsaw.service.PostService;
 import com.yychainsaw.utils.ThreadLocalUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -48,7 +50,7 @@ public class PostServiceImpl implements PostService {
             }
         }
 
-        // --- 逻辑 12: VIP 初始赞 (Stored Procedure -> Java) ---
+
         int bonusLikes = 0;
         User user = userMapper.selectById(userId);
         if (user != null && user.getCreatedAt().isBefore(LocalDateTime.now().minusYears(1))) {
@@ -116,18 +118,18 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public List<Map<String, Object>> getInfluencers() {
+    public List<InfluencerVO> getInfluencers() {
         return postMapper.selectActiveInfluencers();
     }
 
     @Override
-    public List<Map<String, Object>> getPotentialFriends() {
+    public List<PotentialFriendVO> getPotentialFriends() {
         UUID userId = ThreadLocalUtil.getCurrentUserId();
         return postMapper.selectPotentialFriends(userId);
     }
 
     @Override
-    public List<Map<String, Object>> getStats() {
+    public List<GenderStatVO> getStats() {
         return postMapper.selectGenderWeightStats();
     }
 }

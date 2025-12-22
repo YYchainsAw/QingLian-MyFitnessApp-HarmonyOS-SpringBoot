@@ -5,6 +5,8 @@ import com.yychainsaw.mapper.FriendshipMapper;
 import com.yychainsaw.mapper.UserMapper;
 import com.yychainsaw.pojo.entity.Friendship;
 import com.yychainsaw.pojo.entity.User;
+import com.yychainsaw.pojo.vo.FriendPlanVO;
+import com.yychainsaw.pojo.vo.FriendRankingVO;
 import com.yychainsaw.service.FriendshipService;
 import com.yychainsaw.utils.ThreadLocalUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -92,13 +94,13 @@ public class FriendshipServiceImpl implements FriendshipService {
     }
 
     @Override
-    public List<Map<String, Object>> getFriendsActivePlans() {
+    public List<FriendPlanVO> getFriendsActivePlans() {
         UUID userId = ThreadLocalUtil.getCurrentUserId();
         return friendshipMapper.selectFriendsActivePlans(userId);
     }
 
     @Override
-    public List<Map<String, Object>> getFriendRankings() {
+    public List<FriendRankingVO> getFriendRankings() {
         UUID userId = ThreadLocalUtil.getCurrentUserId();
         return friendshipMapper.selectFriendRankings(userId);
     }

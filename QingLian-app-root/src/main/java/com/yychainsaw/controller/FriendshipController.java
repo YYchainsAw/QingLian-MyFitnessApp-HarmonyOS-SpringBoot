@@ -1,6 +1,8 @@
 package com.yychainsaw.controller;
 
 import com.yychainsaw.pojo.dto.Result;
+import com.yychainsaw.pojo.vo.FriendPlanVO;
+import com.yychainsaw.pojo.vo.FriendRankingVO;
 import com.yychainsaw.service.FriendshipService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -35,14 +37,14 @@ public class FriendshipController {
     }
 
     @GetMapping("/plans")
-    public Result<List<Map<String, Object>>> getFriendsActivePlans() {
-        List<Map<String, Object>> plans = friendshipService.getFriendsActivePlans();
+    public Result<List<FriendPlanVO>> getFriendsActivePlans() {
+        List<FriendPlanVO> plans = friendshipService.getFriendsActivePlans();
         return Result.success(plans);
     }
 
     @GetMapping("/rankings")
-    public Result<List<Map<String, Object>>> getFriendRankings() {
-        List<Map<String, Object>> rankings = friendshipService.getFriendRankings();
+    public Result<List<FriendRankingVO>> getFriendRankings() {
+        List<FriendRankingVO> rankings = friendshipService.getFriendRankings();
         return Result.success(rankings);
     }
 }

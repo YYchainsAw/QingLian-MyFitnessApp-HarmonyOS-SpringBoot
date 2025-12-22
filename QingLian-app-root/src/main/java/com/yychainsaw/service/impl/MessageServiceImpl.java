@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -30,8 +29,12 @@ public class MessageServiceImpl implements MessageService {
 
     @Override
     public MessageVO sendMessage(MessageSendDTO dto) {
-        // 1. 构建实体对象
+
         UUID senderId = ThreadLocalUtil.getCurrentUserId();
+        if (senderId.toString().equals(dto.getReceiverId())) {
+            throw new RuntimeException("不能给自己发送私信!");
+        }
+
         Message message = new Message();
         message.setSenderId(senderId);
         message.setReceiverId(UUID.fromString(dto.getReceiverId()));
@@ -88,7 +91,7 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public List<Map<String, Object>> getChatHistory(UUID friendId) {
+    public List<Message> getChatHistory(UUID friendId) {
         UUID userId = ThreadLocalUtil.getCurrentUserId();
         return messageMapper.selectChatHistory(userId, friendId);
     }

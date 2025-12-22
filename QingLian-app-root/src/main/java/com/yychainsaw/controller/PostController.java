@@ -3,7 +3,9 @@ package com.yychainsaw.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yychainsaw.pojo.dto.PostCreateDTO;
 import com.yychainsaw.pojo.dto.Result;
+import com.yychainsaw.pojo.vo.InfluencerVO;
 import com.yychainsaw.pojo.vo.PostVO;
+import com.yychainsaw.pojo.vo.PotentialFriendVO;
 import com.yychainsaw.service.PostService;
 import com.yychainsaw.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/community")
@@ -53,13 +54,13 @@ public class PostController {
 
     // 操作 11: 活跃达人榜
     @GetMapping("/influencers")
-    public Result<List<Map<String, Object>>> getInfluencers() {
+    public Result<List<InfluencerVO>> getInfluencers() {
         return Result.success(postService.getInfluencers());
     }
 
     // 操作 14: 潜在好友推荐
     @GetMapping("/recommend-friends")
-    public Result<List<Map<String, Object>>> getPotentialFriends() {
+    public Result<List<PotentialFriendVO>> getPotentialFriends() {
         return Result.success(postService.getPotentialFriends());
     }
 

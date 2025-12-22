@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.yychainsaw.mapper.UserMapper;
 import com.yychainsaw.pojo.dto.UserUpdateDTO;
 import com.yychainsaw.pojo.entity.User;
+import com.yychainsaw.pojo.vo.UserSocialDashboardVO;
 import com.yychainsaw.pojo.vo.UserVO;
 import com.yychainsaw.service.UserService;
 import com.yychainsaw.utils.ThreadLocalUtil;
@@ -75,8 +76,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void updateLastLoginTime() {
-        UUID userId = ThreadLocalUtil.getCurrentUserId();
+    public void updateLastLoginTime(UUID userId) {
         User user = new User();
         user.setUserId(userId);
         user.setLastLoginTime(LocalDateTime.now());
@@ -113,7 +113,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Map<String, Object> getUserSocialDashboard() {
+    public UserSocialDashboardVO getUserSocialDashboard() {
         UUID userId = ThreadLocalUtil.getCurrentUserId();
         return userMapper.selectUserSocialDashboard(userId);
     }

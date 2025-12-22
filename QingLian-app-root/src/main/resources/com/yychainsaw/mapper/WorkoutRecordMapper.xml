@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yychainsaw.mapper.WorkoutRecordMapper">
+
+    <select id="selectBurnRank" resultType="com.yychainsaw.pojo.vo.BurnRankVO">
+        SELECT user_id, SUM(calories_burned) as total_calories,
+        DENSE_RANK() OVER (ORDER BY SUM(calories_burned) DESC) as rank
+        FROM workout_records GROUP BY user_id LIMIT 10
+    </select>
+
+
+</mapper>

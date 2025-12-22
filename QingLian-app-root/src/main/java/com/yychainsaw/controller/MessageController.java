@@ -2,6 +2,7 @@ package com.yychainsaw.controller;
 
 import com.yychainsaw.pojo.dto.MessageSendDTO;
 import com.yychainsaw.pojo.dto.Result;
+import com.yychainsaw.pojo.entity.Message;
 import com.yychainsaw.pojo.vo.MessageVO;
 import com.yychainsaw.service.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,8 +51,8 @@ public class MessageController {
     }
 
     @GetMapping("/history/{friendId}")
-    public Result<List<Map<String, Object>>> getChatHistory(@PathVariable String friendId) {
-        List<Map<String, Object>> history = messageService.getChatHistory(UUID.fromString(friendId));
+    public Result<List<Message>> getChatHistory(@PathVariable String friendId) {
+        List<Message> history = messageService.getChatHistory(UUID.fromString(friendId));
         return Result.success(history);
     }
 }

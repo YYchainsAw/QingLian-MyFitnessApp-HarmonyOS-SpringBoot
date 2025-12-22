@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yychainsaw.mapper.MovementMapper">
+
+    <select id="getMovementAnalytics" resultType="com.yychainsaw.pojo.vo.MovementAnalyticsVO">
+        SELECT m1.category, COUNT(*) as movement_count,
+        ROUND(AVG(m1.difficulty_level), 1) as avg_difficulty,
+        (SELECT title FROM movements m2
+        WHERE m2.category = m1.category
+        ORDER BY difficulty_level DESC LIMIT 1) as hardest_movement
+        FROM movements m1
+        GROUP BY m1.category
+    </select>
+
+</mapper>
