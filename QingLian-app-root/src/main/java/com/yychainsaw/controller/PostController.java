@@ -1,6 +1,7 @@
 package com.yychainsaw.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yychainsaw.pojo.dto.PageBean;
 import com.yychainsaw.pojo.dto.PostCreateDTO;
 import com.yychainsaw.pojo.dto.Result;
 import com.yychainsaw.pojo.vo.InfluencerVO;
@@ -33,8 +34,8 @@ public class PostController {
 
     // 操作 4: 分页获取 Feed 流
     @GetMapping("/feed")
-    public Result<Page<PostVO>> getFeed(@RequestParam(defaultValue = "1") int page,
-                                        @RequestParam(defaultValue = "10") int size) {
+    public Result<PageBean<PostVO>> getFeed(Integer page,
+                                            Integer size) {
         return Result.success(postService.getPostFeed(page, size));
     }
 

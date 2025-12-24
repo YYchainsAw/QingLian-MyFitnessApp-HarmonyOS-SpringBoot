@@ -1,9 +1,11 @@
 package com.yychainsaw.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import com.yychainsaw.mapper.PostMapper;
 import com.yychainsaw.mapper.UserMapper;
+import com.yychainsaw.pojo.dto.PageBean;
 import com.yychainsaw.pojo.dto.PostCreateDTO;
 import com.yychainsaw.pojo.dto.PostUpdateDTO;
 import com.yychainsaw.pojo.entity.Post;
@@ -71,8 +73,23 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public Page<PostVO> getPostFeed(int page, int size) {
-        return postMapper.selectPostFeed(new Page<>(page, size));
+    public PageBean<PostVO> getPostFeed(Integer pageNum, Integer pageSize) {
+        // 1. 设置分页参数
+        PageHelper.startPage(pageNum, pageSize);
+
+        // 2. 执行查询 (Mapper 已修改为返回 List)
+        // PageHelper 会自动拦截 SQL 并添加 LIMIT
+        List<PostVO> postVOs = postMapper.selectPostFeed();
+
+        // 3. 获取分页信息 (强转为 Page 对象以获取 total)
+        com.github.pagehelper.Page<PostVO> p = (Page<PostVO>) postVOs;
+
+        // 4. 封装结果
+        PageBean<PostVO> pageBean = new PageBean<>();
+        pageBean.setTotal(p.getTotal());
+        pageBean.setItems(postVOs);
+
+        return pageBean;
     }
 
     @Override

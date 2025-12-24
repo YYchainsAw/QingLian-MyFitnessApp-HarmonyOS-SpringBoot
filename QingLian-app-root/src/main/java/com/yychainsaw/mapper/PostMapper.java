@@ -2,6 +2,7 @@ package com.yychainsaw.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yychainsaw.pojo.dto.PageBean;
 import com.yychainsaw.pojo.entity.Post;
 import com.yychainsaw.pojo.vo.GenderStatVO;
 import com.yychainsaw.pojo.vo.InfluencerVO;
@@ -18,7 +19,7 @@ import java.util.UUID;
 @Mapper
 public interface PostMapper extends BaseMapper<Post> {
 
-    Page<PostVO> selectPostFeed(Page<PostVO> page);
+    List<PostVO> selectPostFeed();
 
     List<InfluencerVO> selectActiveInfluencers();
 
