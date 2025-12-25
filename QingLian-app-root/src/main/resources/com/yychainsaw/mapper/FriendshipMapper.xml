@@ -22,5 +22,12 @@
         ORDER BY total_workouts DESC LIMIT 5
     </select>
 
+    <select id="selectFriendList" resultType="com.yychainsaw.pojo.entity.User">
+        SELECT u.* FROM users u
+        JOIN friendships f ON (f.friend_id = u.user_id OR f.user_id = u.user_id)
+        WHERE (f.user_id = #{userId} OR f.friend_id = #{userId})
+        AND f.status = 'ACCEPTED'
+        AND u.user_id != #{userId}
+    </select>
 
 </mapper>

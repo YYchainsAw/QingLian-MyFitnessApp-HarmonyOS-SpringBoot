@@ -1,12 +1,12 @@
 package com.yychainsaw.qinglianapp.ui.profile
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -33,7 +33,6 @@ fun ProfileScreen(navController: NavController) {
     var userVO by remember { mutableStateOf<UserVO?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // 数据加载逻辑保持不变
     LaunchedEffect(Unit) {
         try {
             if (RetrofitClient.authToken.isNullOrBlank()) {
@@ -63,16 +62,16 @@ fun ProfileScreen(navController: NavController) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(240.dp) // 稍微增高一点
+                .height(240.dp)
                 .background(QingLianYellow)
                 .padding(24.dp)
         ) {
-            // 设置按钮 (右上角)
+            // 设置按钮
             IconButton(
-                onClick = { navController.navigate("settings") }, // <--- 导航到设置
+                onClick = { navController.navigate("settings") },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .offset(x = 12.dp, y = (-12).dp) // 微调位置
+                    .offset(x = 12.dp, y = (-12).dp)
             ) {
                 Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.Black)
             }
@@ -109,12 +108,18 @@ fun ProfileScreen(navController: NavController) {
                     Spacer(modifier = Modifier.width(16.dp))
 
                     Column {
-                        Text(
-                            text = userVO?.nickname ?: "未登录",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = userVO?.nickname ?: "未登录",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                            // 预留：编辑资料入口 (updateUserInfo)
+                            IconButton(onClick = { /* TODO: 跳转编辑资料页 */ }, modifier = Modifier.size(24.dp).padding(start = 8.dp)) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.Black.copy(alpha = 0.6f))
+                            }
+                        }
                         Text(
                             text = "ID: ${userVO?.username ?: "--"}",
                             fontSize = 14.sp,
@@ -125,7 +130,7 @@ fun ProfileScreen(navController: NavController) {
             }
         }
 
-        // 2. 身体数据卡片 (悬浮效果)
+        // 2. 身体数据卡片
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -146,11 +151,12 @@ fun ProfileScreen(navController: NavController) {
             }
         }
 
-        // 3. 菜单列表 (移除 offset，自然排列)
-        Column(modifier = Modifier.padding(top = 0.dp)) { // 调整间距
+        // 3. 菜单列表
+        Column(modifier = Modifier.padding(top = 0.dp)) {
             MenuItem(text = "我的好友") { navController.navigate("friends") }
             MenuItem(text = "健身记录") { navController.navigate("records") }
-            // 退出登录已移至设置页
+            // 预留：数据看板入口 (getUserDashboard)
+            MenuItem(text = "数据看板") { /* TODO: 跳转数据看板 */ }
         }
     }
 }
@@ -169,7 +175,7 @@ fun MenuItem(text: String, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
-            .clickable(onClick = onClick) // <--- 添加点击事件
+            .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween

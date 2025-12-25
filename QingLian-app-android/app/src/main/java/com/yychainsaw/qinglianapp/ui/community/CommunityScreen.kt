@@ -5,12 +5,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,7 +32,6 @@ import com.yychainsaw.qinglianapp.ui.theme.QingLianBlue
 import com.yychainsaw.qinglianapp.ui.theme.QingLianYellow
 import kotlinx.coroutines.launch
 
-// 辅助函数：处理图片 URL
 fun resolveImageUrl(url: String?): String {
     if (url.isNullOrBlank()) return ""
     if (url.startsWith("http://") || url.startsWith("https://")) {
@@ -41,7 +42,6 @@ fun resolveImageUrl(url: String?): String {
     return "$cleanBase/$cleanPath"
 }
 
-// 辅助函数：格式化时间
 fun formatDate(time: String?): String {
     if (time.isNullOrBlank()) return ""
     return try {
@@ -74,7 +74,6 @@ fun CommunityScreen(onPostCreate: () -> Unit) {
     }
 
     Scaffold(
-        // 移除 topBar，让界面更简洁
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onPostCreate,
@@ -93,13 +92,38 @@ fun CommunityScreen(onPostCreate: () -> Unit) {
             }
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                // 增加顶部间距，避免内容贴顶
+                modifier = Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // 预留：推荐关注/达人 (getInfluencers, getRecommendFriends)
+                item {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        Text("推荐关注", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(5) { // 模拟5个推荐位
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.width(100.dp).clickable { /* TODO: 查看用户 */ }
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(QingLianBlue.copy(alpha = 0.2f)))
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text("健身达人", fontSize = 12.sp, maxLines = 1)
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Icon(Icons.Default.PersonAdd, contentDescription = null, tint = QingLianYellow, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 items(posts) { post ->
                     CommunityCard(post)
                 }
@@ -116,86 +140,41 @@ fun CommunityCard(post: PostVO) {
     var likeCount by remember(post.likeCount) { mutableIntStateOf(post.likeCount) }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp), // 增加左右留白
-        shape = RoundedCornerShape(16.dp), // 更圆润的角
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp) // 降低阴影，更扁平简洁
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            // --- 1. 头部 ---
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 AsyncImage(
                     model = resolveImageUrl(post.authorAvatar),
                     contentDescription = "Avatar",
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        // 使用主题色 QingLianBlue 的淡色作为背景
-                        .background(QingLianBlue.copy(alpha = 0.2f))
+                    modifier = Modifier.size(40.dp).clip(CircleShape).background(QingLianBlue.copy(alpha = 0.2f))
                 )
-
                 Spacer(modifier = Modifier.width(12.dp))
-
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = post.authorName,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = Color(0xFF222222)
-                    )
-                    Text(
-                        text = formatDate(post.createTime),
-                        fontSize = 11.sp,
-                        color = Color(0xFF999999)
-                    )
+                    Text(text = post.authorName, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF222222))
+                    Text(text = formatDate(post.createTime), fontSize = 11.sp, color = Color(0xFF999999))
                 }
-                // 移除了右上角的三个点图标
             }
-
             Spacer(modifier = Modifier.height(12.dp))
-
-            // --- 2. 内容 ---
             if (post.content.isNotBlank()) {
-                Text(
-                    text = post.content,
-                    fontSize = 15.sp,
-                    color = Color(0xFF333333),
-                    lineHeight = 24.sp,
-                    letterSpacing = 0.5.sp
-                )
+                Text(text = post.content, fontSize = 15.sp, color = Color(0xFF333333), lineHeight = 24.sp, letterSpacing = 0.5.sp)
                 Spacer(modifier = Modifier.height(12.dp))
             }
-
-            // --- 3. 图片 ---
             if (!post.imageUrls.isNullOrEmpty()) {
                 PostImageGrid(post.imageUrls)
                 Spacer(modifier = Modifier.height(16.dp))
             }
-
-            // --- 4. 底部互动栏 ---
             Divider(color = Color(0xFFF5F5F5), thickness = 1.dp)
             Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
                 InteractionButton(
                     icon = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                     text = if (likeCount > 0) likeCount.toString() else "点赞",
                     isActive = isLiked,
-                    // 使用主题色 QingLianYellow 作为点赞激活色
                     activeColor = QingLianYellow,
                     onClick = {
                         isLiked = !isLiked
@@ -217,31 +196,11 @@ fun CommunityCard(post: PostVO) {
 }
 
 @Composable
-fun InteractionButton(
-    icon: ImageVector,
-    text: String,
-    isActive: Boolean = false,
-    activeColor: Color = Color.Red,
-    onClick: () -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .clickable(onClick = onClick)
-            .padding(4.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (isActive) activeColor else Color(0xFF666666),
-            modifier = Modifier.size(20.dp)
-        )
+fun InteractionButton(icon: ImageVector, text: String, isActive: Boolean = false, activeColor: Color = Color.Red, onClick: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable(onClick = onClick).padding(4.dp)) {
+        Icon(imageVector = icon, contentDescription = null, tint = if (isActive) activeColor else Color(0xFF666666), modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = text,
-            fontSize = 13.sp,
-            color = if (isActive) activeColor else Color(0xFF666666)
-        )
+        Text(text = text, fontSize = 13.sp, color = if (isActive) activeColor else Color(0xFF666666))
     }
 }
 
@@ -254,47 +213,27 @@ fun PostImageGrid(imageUrls: List<String>) {
         count <= 6 -> 2
         else -> 3
     }
-
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         for (i in 0 until rows) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 val startIndex = i * 3
                 val rowCount = if (count == 1) 1 else 3
                 val endIndex = minOf(startIndex + rowCount, count)
-
                 for (j in startIndex until endIndex) {
                     val url = imageUrls[j]
                     val height = if (count == 1) 220.dp else 110.dp
-                    val modifier = if (count == 1) {
-                        Modifier
-                            .fillMaxWidth(0.7f)
-                            .height(height)
-                    } else {
-                        Modifier
-                            .weight(1f)
-                            .height(height)
-                    }
-
+                    val modifier = if (count == 1) Modifier.fillMaxWidth(0.7f).height(height) else Modifier.weight(1f).height(height)
                     AsyncImage(
                         model = resolveImageUrl(url),
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
-                        modifier = modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            // 使用主题色 QingLianBlue 的淡色作为图片加载背景
-                            .background(QingLianBlue.copy(alpha = 0.1f))
+                        modifier = modifier.clip(RoundedCornerShape(8.dp)).background(QingLianBlue.copy(alpha = 0.1f))
                     )
                 }
-
                 if (count > 1) {
                     val itemsInRow = endIndex - startIndex
                     if (itemsInRow < 3) {
-                        repeat(3 - itemsInRow) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
+                        repeat(3 - itemsInRow) { Spacer(modifier = Modifier.weight(1f)) }
                     }
                 }
             }

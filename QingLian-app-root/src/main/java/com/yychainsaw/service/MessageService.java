@@ -15,4 +15,6 @@ public interface MessageService {
     Long getUnreadCount();
 
     List<Message> getChatHistory(UUID uuid1);
+
+    void markGroupAsRead(Long groupId, Long lastMsgId);
 }

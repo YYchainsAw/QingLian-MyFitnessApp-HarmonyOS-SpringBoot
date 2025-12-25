@@ -53,18 +53,25 @@ interface ApiService {
     @GET("/friendships/rankings")
     suspend fun getFriendRankings(): ApiResponse<List<FriendRankingVO>>
 
-    @POST("/messages")
-    suspend fun sendMessage(@Body messageDto: MessageSendDTO): ApiResponse<MessageVO>
+    // 发送消息
+    @POST("messages")
+    suspend fun sendMessage(@Body dto: MessageSendDTO): ApiResponse<MessageVO>
 
-    @PUT("/messages/read/{senderId}")
-    suspend fun markMessagesRead(@Path("senderId") senderId: String): ApiResponse<Void>
+    // 获取历史记录
+    @GET("messages/history/{friendId}")
+    suspend fun getMessageHistory(@Path("friendId") friendId: String): ApiResponse<List<MessageEntity>>
 
-    @GET("/messages/unread/count")
-    suspend fun getUnreadMessageCount(): ApiResponse<Long>
+    // 标记已读
+    @PUT("messages/read/{senderId}")
+    suspend fun markAsRead(@Path("senderId") senderId: String): ApiResponse<Void>
 
-    @GET("/messages/history/{friendId}")
-    suspend fun getMessageHistory(@Path("friendId") friendId: String): ApiResponse<List<MessageVO>>
+    // 获取未读总数
+    @GET("messages/unread/count")
+    suspend fun getUnreadCount(): ApiResponse<Long>
 
+    // (假设) 获取好友列表，用于展示会话列表
+    @GET("friends")
+    suspend fun getFriends(): ApiResponse<List<UserVO>>
     // ================= 4. 健身动作库 (Movement) =================
     @POST("/movements/add")
     suspend fun addMovement(@Body movementDto: MovementDTO): ApiResponse<Void>

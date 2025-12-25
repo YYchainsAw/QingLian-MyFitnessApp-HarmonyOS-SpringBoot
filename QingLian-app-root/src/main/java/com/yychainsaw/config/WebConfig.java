@@ -19,7 +19,11 @@ public class WebConfig implements WebMvcConfigurer {
                         "/auth/login",
                         "/auth/register",
                         "/movements/search",
-                        "/user/search"
+                        "/user/search",
+                        "/community/posts",
+                        "/movements/search",
+                        "/movements/analytics",
+                        "/movements/hardcore"
                 );
     }
 }

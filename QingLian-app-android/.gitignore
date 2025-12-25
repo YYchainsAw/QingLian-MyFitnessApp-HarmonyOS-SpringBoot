@@ -36,6 +36,4 @@ Thumbs.db
 Desktop.ini
 
 # --- 误伤修复 ---
-# 之前你忽略了测试代码，这里确保它们不被忽略（其实只要上面不写忽略就行，这里是双重保险）
-!/app/src/test
-!/app/src/androidTest
+

@@ -11,5 +11,33 @@
         ORDER BY sent_at DESC LIMIT 10
     </select>
 
+    <insert id="markGroupAsRead">
+        INSERT INTO group_read_status (group_id, user_id, last_read_msg_id)
+        VALUES (#{groupId}, #{userId}, #{lastMsgId})
+        ON CONFLICT (group_id, user_id)
+            DO UPDATE SET last_read_msg_id = EXCLUDED.last_read_msg_id;
+    </insert>
+
+    <!-- 新增：统计总未读数 -->
+    <select id="countTotalUnread" resultType="java.lang.Long">
+        SELECT
+            (
+                -- 1. 私聊未读数
+                SELECT COUNT(*) FROM messages
+                WHERE receiver_id = #{userId} AND is_read = false
+            )
+                +
+            (
+                -- 2. 群聊未读数
+                -- 逻辑：找出我加入的所有群，统计每个群里 ID > 我读过的最后一条ID 的消息数量
+                SELECT COUNT(*)
+                FROM messages m
+                         JOIN group_members gm ON m.group_id = gm.group_id
+                         LEFT JOIN group_read_status grs ON m.group_id = grs.group_id AND grs.user_id = #{userId}
+                WHERE gm.user_id = #{userId}       -- 我加入的群
+                  AND m.group_id IS NOT NULL       -- 必须是群消息
+                  AND m.msg_id > COALESCE(grs.last_read_msg_id, 0) -- 消息ID大于我的阅读进度
+            )
+    </select>
 
 </mapper>

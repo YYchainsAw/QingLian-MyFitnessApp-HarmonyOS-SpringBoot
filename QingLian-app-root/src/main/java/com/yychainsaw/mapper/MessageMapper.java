@@ -13,4 +13,8 @@ import java.util.UUID;
 public interface MessageMapper extends BaseMapper<Message> {
 
     List<Message> selectChatHistory(UUID userId, UUID friendId);
+
+    void markGroupAsRead(Long groupId, UUID userId, Long lastMsgId);
+
+    Long countTotalUnread(UUID userId);
 }

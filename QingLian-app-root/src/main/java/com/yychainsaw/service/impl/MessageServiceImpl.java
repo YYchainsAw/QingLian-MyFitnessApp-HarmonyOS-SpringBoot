@@ -24,24 +24,27 @@ public class MessageServiceImpl implements MessageService {
     private MessageMapper messageMapper;
     @Autowired
     private UserMapper userMapper;
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
+
 
     @Override
     public MessageVO sendMessage(MessageSendDTO dto) {
-
         UUID senderId = ThreadLocalUtil.getCurrentUserId();
-        if (senderId.toString().equals(dto.getReceiverId())) {
-            throw new RuntimeException("不能给自己发送私信!");
-        }
 
         Message message = new Message();
-        message.setSenderId(senderId);
-        message.setReceiverId(UUID.fromString(dto.getReceiverId()));
         message.setContent(dto.getContent());
-        message.setSentAt(LocalDateTime.now());
-        message.setIsRead(false);
+        message.setSenderId(senderId); // 获取当前登录用户
 
+        if (dto.getGroupId() != null) {
+            // 群聊设置
+            message.setGroupId(dto.getGroupId());
+            message.setReceiverId(null);
+            message.setIsRead(true); // 群聊消息在 messages 表默认设为 true (因为状态由另一张表管理)
+        } else {
+            // 私聊设置
+            message.setReceiverId(UUID.fromString(dto.getReceiverId()));
+            message.setGroupId(null);
+            message.setIsRead(false);
+        }
         // 2. 插入数据库 (MyBatis 会自动回填 ID 到 message 对象中)
         messageMapper.insert(message);
 
@@ -54,17 +57,6 @@ public class MessageServiceImpl implements MessageService {
         vo.setContent(message.getContent());
         vo.setSentAt(message.getSentAt());
         vo.setIsRead(message.getIsRead());
-
-        User user = userMapper.selectById(UUID.fromString(dto.getReceiverId()));
-        if (user != null) {
-            String targetUsername = user.getUsername();
-            messagingTemplate.convertAndSendToUser(
-                    targetUsername,
-                    "/queue/messages",
-                    "收到新私信"
-            );
-        }
-
 
         return vo;
     }
@@ -94,5 +86,11 @@ public class MessageServiceImpl implements MessageService {
     public List<Message> getChatHistory(UUID friendId) {
         UUID userId = ThreadLocalUtil.getCurrentUserId();
         return messageMapper.selectChatHistory(userId, friendId);
+    }
+
+    @Override
+    public void markGroupAsRead(Long groupId, Long lastMsgId) {
+        UUID userId = ThreadLocalUtil.getCurrentUserId();
+        messageMapper.markGroupAsRead(groupId, userId, lastMsgId);
     }
 }

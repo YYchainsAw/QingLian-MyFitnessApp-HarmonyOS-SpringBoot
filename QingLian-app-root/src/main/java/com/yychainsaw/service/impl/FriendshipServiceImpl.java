@@ -104,4 +104,11 @@ public class FriendshipServiceImpl implements FriendshipService {
         UUID userId = ThreadLocalUtil.getCurrentUserId();
         return friendshipMapper.selectFriendRankings(userId);
     }
+
+    @Override
+    public List<User> getFriendList() {
+        UUID userId = ThreadLocalUtil.getCurrentUserId();
+
+        return friendshipMapper.selectFriendList(userId);
+    }
 }

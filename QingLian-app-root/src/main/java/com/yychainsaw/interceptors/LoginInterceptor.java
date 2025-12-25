@@ -23,6 +23,10 @@ public class LoginInterceptor implements HandlerInterceptor {
         // 1. 获取 Header
         String token = request.getHeader("Authorization");
 
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true; // 直接放行预检请求，不校验 Token
+        }
+
         // 2. 【新增】兼容处理：如果 Token 为空直接放行(或报错)，如果带 Bearer 前缀则去掉
         if (token == null || token.isEmpty()) {
             response.setStatus(401);
