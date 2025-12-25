@@ -8,7 +8,7 @@
         SELECT * FROM messages
         WHERE (sender_id = #{userId} AND receiver_id = #{friendId})
            OR (sender_id = #{friendId} AND receiver_id = #{userId})
-        ORDER BY sent_at DESC LIMIT 10
+        ORDER BY sent_at DESC
     </select>
 
     <insert id="markGroupAsRead">

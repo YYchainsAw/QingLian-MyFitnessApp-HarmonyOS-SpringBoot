@@ -1,6 +1,9 @@
 package com.yychainsaw.controller;
 
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import com.yychainsaw.pojo.dto.MessageSendDTO;
+import com.yychainsaw.pojo.dto.PageBean;
 import com.yychainsaw.pojo.dto.Result;
 import com.yychainsaw.pojo.entity.Message;
 import com.yychainsaw.pojo.vo.MessageVO;
@@ -10,6 +13,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -74,8 +78,28 @@ public class MessageController {
     }
 
     @GetMapping("/history/{friendId}")
-    public Result<List<Message>> getChatHistory(@PathVariable String friendId) {
+    public Result<PageBean<Message>> getChatHistory(
+            @PathVariable String friendId,
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "20") Integer pageSize) {
+
+        // 1. 开启分页 (SQL 必须是 ORDER BY created_at DESC)
+        PageHelper.startPage(pageNum, pageSize);
+
+        // 2. 执行查询
         List<Message> history = messageService.getChatHistory(UUID.fromString(friendId));
-        return Result.success(history);
+
+        // 3. 使用 PageInfo 获取正确的 total (总条数)
+        // PageHelper 会自动拦截 SQL 计算总数，必须这一步
+        PageInfo<Message> pageInfo = new PageInfo<>(history);
+
+        // 4. 核心修复：反转列表顺序 (为了前端展示习惯：旧 -> 新)
+        List<Message> resultList = pageInfo.getList();
+        Collections.reverse(resultList);
+
+        // 5. 封装到自定义 PageBean
+        PageBean<Message> pageBean = new PageBean<>(pageInfo.getTotal(), resultList);
+
+        return Result.success(pageBean);
     }
 }
