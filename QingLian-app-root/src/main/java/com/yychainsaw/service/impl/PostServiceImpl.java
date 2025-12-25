@@ -77,8 +77,7 @@ public class PostServiceImpl implements PostService {
         // 1. 设置分页参数
         PageHelper.startPage(pageNum, pageSize);
 
-        // 2. 执行查询 (Mapper 已修改为返回 List)
-        // PageHelper 会自动拦截 SQL 并添加 LIMIT
+
         List<PostVO> postVOs = postMapper.selectPostFeed();
 
         // 3. 获取分页信息 (强转为 Page 对象以获取 total)
