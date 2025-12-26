@@ -4,6 +4,7 @@ import com.yychainsaw.pojo.dto.UserUpdateDTO;
 import com.yychainsaw.pojo.entity.User;
 import com.yychainsaw.pojo.vo.UserSocialDashboardVO;
 import com.yychainsaw.pojo.vo.UserVO;
+import org.hibernate.validator.constraints.URL;
 
 import java.util.List;
 import java.util.Map;
@@ -29,4 +30,5 @@ public interface UserService {
 
     UserSocialDashboardVO getUserSocialDashboard();
 
+    void updateAvatar(@URL String avatarUrl);
 }

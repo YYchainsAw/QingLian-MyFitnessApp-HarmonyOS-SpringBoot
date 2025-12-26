@@ -2,6 +2,7 @@ package com.yychainsaw.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.yychainsaw.mapper.UserMapper;
 import com.yychainsaw.pojo.dto.UserUpdateDTO;
 import com.yychainsaw.pojo.entity.User;
@@ -116,6 +117,17 @@ public class UserServiceImpl implements UserService {
     public UserSocialDashboardVO getUserSocialDashboard() {
         UUID userId = ThreadLocalUtil.getCurrentUserId();
         return userMapper.selectUserSocialDashboard(userId);
+    }
+
+    @Override
+    public void updateAvatar(String avatarUrl) {
+        UUID userId = ThreadLocalUtil.getCurrentUserId();
+
+        LambdaUpdateWrapper<User> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(User::getUserId, userId.toString())
+                     .set(User::getAvatarUrl, avatarUrl);
+
+        userMapper.update(null, updateWrapper);
     }
 
 }

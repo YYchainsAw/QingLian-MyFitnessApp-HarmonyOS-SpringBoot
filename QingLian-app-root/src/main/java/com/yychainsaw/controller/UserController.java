@@ -5,6 +5,7 @@ import com.yychainsaw.pojo.dto.UserUpdateDTO;
 import com.yychainsaw.pojo.vo.UserSocialDashboardVO;
 import com.yychainsaw.pojo.vo.UserVO;
 import com.yychainsaw.service.UserService;
+import org.hibernate.validator.constraints.URL;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -33,18 +34,18 @@ public class UserController {
         return Result.success();
     }
 
+    @PatchMapping("/updateAvatar")
+    public Result updateAvatar(@RequestParam @URL String avatarUrl) {
+        userService.updateAvatar(avatarUrl);
+        return Result.success();
+    }
+
     @DeleteMapping("/delete")
     public Result deleteAccount() {
         userService.deleteUser();
         return Result.success();
     }
 
-    /**
-     * 操作 10: 查找昵称中包含特定关键字的用户
-     * 优化：
-     * 1. 校验 keyword 是否为空
-     * 2. 逻辑下沉到 Service
-     */
     @GetMapping("/search")
     public Result<List<UserVO>> searchUsers(@RequestParam(required = false) String keyword) {
         if (keyword == null || keyword.trim().isEmpty()) {
@@ -54,13 +55,9 @@ public class UserController {
         return Result.success(users);
     }
 
-    // SQL #12: 用户的社交概览 (Dashboard)
-    // GET /user/dashboard
     @GetMapping("/dashboard")
     public Result<UserSocialDashboardVO> getSocialDashboard() {
         UserSocialDashboardVO dashboard = userService.getUserSocialDashboard();
         return Result.success(dashboard);
     }
-
-
 }

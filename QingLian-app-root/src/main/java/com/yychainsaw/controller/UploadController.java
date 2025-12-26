@@ -32,10 +32,6 @@ public class UploadController {
         }
     }
 
-    /**
-     * 新增：批量上传接口 (多线程并行)
-     * 前端使用 FormData 传递多个文件，key 均为 "files"
-     */
     @PostMapping("/upload/batch")
     public Result<List<String>> uploadBatch(MultipartFile[] files) {
         if (files == null || files.length == 0) {

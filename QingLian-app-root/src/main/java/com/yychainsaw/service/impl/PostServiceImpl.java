@@ -37,8 +37,7 @@ public class PostServiceImpl implements PostService {
     @Transactional(rollbackFor = Exception.class)
     public void createPost(PostCreateDTO dto) {
         UUID userId = ThreadLocalUtil.getCurrentUserId();
-        // --- 逻辑 13: 防止恶意刷帖 (Trigger -> Java) ---
-        // 查询该用户最新的一条帖子
+
         LambdaQueryWrapper<Post> lastPostQuery = new LambdaQueryWrapper<>();
         lastPostQuery.eq(Post::getUserId, userId)
                 .orderByDesc(Post::getCreatedAt)
@@ -59,11 +58,11 @@ public class PostServiceImpl implements PostService {
             bonusLikes = 10; // 注册超过1年，初始赞 +10
         }
 
-        // --- 插入帖子 ---
+
         Post post = new Post();
         post.setUserId(userId);
         post.setContent(dto.getContent());
-        // List<String> -> String[]
+
         if (dto.getImageUrls() != null) {
             post.setImageUrls(dto.getImageUrls().toArray(new String[0]));
         }
@@ -74,16 +73,13 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public PageBean<PostVO> getPostFeed(Integer pageNum, Integer pageSize) {
-        // 1. 设置分页参数
-        PageHelper.startPage(pageNum, pageSize);
 
+        PageHelper.startPage(pageNum, pageSize);
 
         List<PostVO> postVOs = postMapper.selectPostFeed();
 
-        // 3. 获取分页信息 (强转为 Page 对象以获取 total)
         com.github.pagehelper.Page<PostVO> p = (Page<PostVO>) postVOs;
 
-        // 4. 封装结果
         PageBean<PostVO> pageBean = new PageBean<>();
         pageBean.setTotal(p.getTotal());
         pageBean.setItems(postVOs);
