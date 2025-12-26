@@ -19,7 +19,9 @@ import com.yychainsaw.qinglianapp.ui.friend.AddFriendScreen
 import com.yychainsaw.qinglianapp.ui.login.LoginScreen
 import com.yychainsaw.qinglianapp.ui.main.MainScreen
 import com.yychainsaw.qinglianapp.ui.message.ChatScreen
+import com.yychainsaw.qinglianapp.ui.profile.EditProfileScreen
 import com.yychainsaw.qinglianapp.ui.profile.FriendsScreen
+import com.yychainsaw.qinglianapp.ui.profile.ProfileScreen
 import com.yychainsaw.qinglianapp.ui.profile.RecordsScreen
 import com.yychainsaw.qinglianapp.ui.profile.SettingsScreen
 import com.yychainsaw.qinglianapp.ui.theme.QingLianAppTheme
@@ -77,6 +79,8 @@ class MainActivity : ComponentActivity() {
                     composable("settings") { SettingsScreen(navController) }
                     composable("friends") { FriendsScreen(navController) }
                     composable("records") { RecordsScreen(navController) }
+                    composable("profile") { ProfileScreen(navController) }
+                    composable("edit_profile") { EditProfileScreen(navController) }
 
                     composable(
                         route = "chat/{friendId}/{friendName}?avatar={avatar}",

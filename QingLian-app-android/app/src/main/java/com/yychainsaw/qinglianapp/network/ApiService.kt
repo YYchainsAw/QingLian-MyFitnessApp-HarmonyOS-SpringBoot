@@ -127,6 +127,9 @@ interface ApiService {
     @POST("upload")
     suspend fun upload(@Part file: MultipartBody.Part): ApiResponse<String>
 
+    @PATCH("updateAvatar")
+    suspend fun updateAvatar(@Query("avatarUrl") avatarUrl: String): Result<Void>
+
     @Multipart
     @POST("upload/batch")
     suspend fun uploadBatch(@Part files: List<MultipartBody.Part>): ApiResponse<List<String>>

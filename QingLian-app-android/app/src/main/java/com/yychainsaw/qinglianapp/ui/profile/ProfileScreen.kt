@@ -7,18 +7,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.yychainsaw.qinglianapp.data.model.vo.UserVO
@@ -26,30 +29,51 @@ import com.yychainsaw.qinglianapp.network.RetrofitClient
 import com.yychainsaw.qinglianapp.ui.theme.QingLianBlue
 import com.yychainsaw.qinglianapp.ui.theme.QingLianYellow
 import com.yychainsaw.qinglianapp.utils.TokenManager
+import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileScreen(navController: NavController) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
     var userVO by remember { mutableStateOf<UserVO?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
-    LaunchedEffect(Unit) {
-        try {
-            if (RetrofitClient.authToken.isNullOrBlank()) {
-                RetrofitClient.authToken = TokenManager.getToken(context)
-            }
-            if (RetrofitClient.authToken.isNullOrBlank()) {
+    // 提取加载逻辑
+    fun loadUserInfo() {
+        scope.launch {
+            try {
+                if (RetrofitClient.authToken.isNullOrBlank()) {
+                    RetrofitClient.authToken = TokenManager.getToken(context)
+                }
+                if (RetrofitClient.authToken.isNullOrBlank()) {
+                    isLoading = false
+                    return@launch
+                }
+                val response = RetrofitClient.apiService.getUserInfo()
+
+                if (response.isSuccess() && response.data != null) {
+                    userVO = response.data
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
                 isLoading = false
-                return@LaunchedEffect
             }
-            val response = RetrofitClient.apiService.getUserInfo()
-            if (response.isSuccess() && response.data != null) {
-                userVO = response.data
+        }
+    }
+
+    // 监听生命周期：每次页面显示（包括从编辑页返回）时刷新数据
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                loadUserInfo()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            isLoading = false
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -71,7 +95,7 @@ fun ProfileScreen(navController: NavController) {
                 onClick = { navController.navigate("settings") },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .offset(x = 12.dp, y = (-12).dp)
+                    .padding(top = 24.dp)
             ) {
                 Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.Black)
             }
@@ -79,56 +103,46 @@ fun ProfileScreen(navController: NavController) {
             if (isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.align(Alignment.Center))
             } else {
+                // 用户信息行
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.align(Alignment.CenterStart)
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(bottom = 40.dp) // 给底部卡片留出空间
+                        .fillMaxWidth()
+                        .clickable { navController.navigate("edit_profile") },
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(
-                        shape = CircleShape,
-                        modifier = Modifier.size(80.dp),
-                        color = Color.White
-                    ) {
-                        if (userVO?.avatarUrl.isNullOrEmpty()) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = null,
-                                tint = Color.Gray,
-                                modifier = Modifier.padding(16.dp)
-                            )
-                        } else {
-                            AsyncImage(
-                                model = userVO?.avatarUrl,
-                                contentDescription = "Avatar",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    }
+                    // 头像
+                    AsyncImage(
+                        model = userVO?.avatarUrl,
+                        contentDescription = "Avatar",
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(Color.White),
+                        contentScale = ContentScale.Crop
+                    )
 
                     Spacer(modifier = Modifier.width(16.dp))
 
+                    // 昵称和ID
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = userVO?.nickname ?: "未登录",
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
-                            // 跳转编辑资料页
-                            IconButton(
-                                onClick = { navController.navigate("edit_profile") },
-                                modifier = Modifier.size(24.dp).padding(start = 8.dp)
-                            ) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.Black.copy(alpha = 0.6f))
-                            }
-                        }
+                        Text(
+                            text = userVO?.nickname ?: "未设置昵称",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
                         Text(
                             text = "ID: ${userVO?.username ?: "--"}",
                             fontSize = 14.sp,
                             color = Color.DarkGray
                         )
                     }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.Black)
                 }
             }
         }
@@ -144,8 +158,8 @@ fun ProfileScreen(navController: NavController) {
         ) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(16.dp)
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 StatItem(label = "身高", value = "${userVO?.height ?: "--"} cm")
@@ -158,7 +172,6 @@ fun ProfileScreen(navController: NavController) {
         Column(modifier = Modifier.padding(top = 0.dp)) {
             MenuItem(text = "我的好友") { navController.navigate("friends") }
             MenuItem(text = "健身记录") { navController.navigate("records") }
-            // 预留：数据看板入口 (getUserDashboard)
             MenuItem(text = "数据看板") { /* TODO: 跳转数据看板 */ }
         }
     }
