@@ -17,6 +17,8 @@ import androidx.navigation.navArgument
 import com.yychainsaw.qinglianapp.network.RetrofitClient
 import com.yychainsaw.qinglianapp.network.WebSocketManager
 import com.yychainsaw.qinglianapp.service.WebSocketService
+import com.yychainsaw.qinglianapp.ui.community.CommunityScreen
+import com.yychainsaw.qinglianapp.ui.community.PostCreateScreen
 import com.yychainsaw.qinglianapp.ui.friend.AddFriendScreen
 import com.yychainsaw.qinglianapp.ui.login.LoginScreen
 import com.yychainsaw.qinglianapp.ui.main.MainScreen
@@ -102,6 +104,12 @@ class MainActivity : ComponentActivity() {
                     composable("records") { RecordsScreen(navController) }
                     composable("profile") { ProfileScreen(navController) }
                     composable("edit_profile") { EditProfileScreen(navController) }
+                    composable("post_create") { PostCreateScreen(navController) }
+                    composable("community") {
+                        CommunityScreen(
+                            onPostCreate = { navController.navigate("post_create") }
+                        )
+                    }
 
                     composable(
                         route = "chat/{friendId}/{friendName}?avatar={avatar}",

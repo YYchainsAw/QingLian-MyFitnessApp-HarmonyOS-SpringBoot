@@ -16,5 +16,7 @@ data class MovementVO(
     val category: String? = "综合",
 
     @SerializedName(value = "difficultyLevel", alternate = ["difficulty_level", "difficulty"])
-    val difficultyLevel: Int = 1
+    val difficultyLevel: Int = 1,
+
+    val imageUrl: String
 )

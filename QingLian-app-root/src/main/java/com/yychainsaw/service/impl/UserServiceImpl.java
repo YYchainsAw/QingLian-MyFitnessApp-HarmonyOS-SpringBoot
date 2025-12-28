@@ -91,7 +91,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void updateProfile(UserUpdateDTO dto) {
         UUID userId = ThreadLocalUtil.getCurrentUserId();
-        // MyBatis-Plus 的 updateById 默认只更新非空字段
+
         User user = new User();
         user.setUserId(userId);
 
@@ -100,6 +100,8 @@ public class UserServiceImpl implements UserService {
         if (dto.getNickname() != null) user.setNickname(dto.getNickname());
 
         userMapper.updateById(user);
+
+        redisTemplate.delete(getUserCacheKey(userId));
     }
 
     @Override
