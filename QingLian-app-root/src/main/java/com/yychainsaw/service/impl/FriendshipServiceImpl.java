@@ -1,6 +1,10 @@
 package com.yychainsaw.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yychainsaw.mapper.FriendshipMapper;
 import com.yychainsaw.mapper.UserMapper;
 import com.yychainsaw.pojo.entity.Friendship;
@@ -11,12 +15,14 @@ import com.yychainsaw.pojo.vo.FriendRankingVO;
 import com.yychainsaw.service.FriendshipService;
 import com.yychainsaw.utils.ThreadLocalUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class FriendshipServiceImpl implements FriendshipService {
@@ -26,8 +32,14 @@ public class FriendshipServiceImpl implements FriendshipService {
     private UserMapper userMapper;
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+    @Autowired
+    private ObjectMapper objectMapper;
 
-
+    private String getFriendListKey(UUID userId) {
+        return "user:friends:" + userId;
+    }
 
     @Override
     public void sendRequest(UUID friendId) {
@@ -67,6 +79,8 @@ public class FriendshipServiceImpl implements FriendshipService {
 
         // 2. WebSocket 通知申请人 (如果数据库更新成功)
         if (rows > 0) {
+            redisTemplate.delete(getFriendListKey(userId));
+            redisTemplate.delete(getFriendListKey(friendId));
             User requester = userMapper.selectById(friendId);
             if (requester != null) {
                 messagingTemplate.convertAndSendToUser(
@@ -92,6 +106,9 @@ public class FriendshipServiceImpl implements FriendshipService {
                 .nested(i -> i.eq("user_id", friendId).eq("friend_id", userId))
         );
         friendshipMapper.delete(wrapper);
+
+        redisTemplate.delete(getFriendListKey(userId));
+        redisTemplate.delete(getFriendListKey(friendId));
     }
 
     @Override
@@ -109,7 +126,26 @@ public class FriendshipServiceImpl implements FriendshipService {
     @Override
     public List<FriendListVO> getFriendList() {
         UUID userId = ThreadLocalUtil.getCurrentUserId();
-        return friendshipMapper.selectFriendList(userId);
+        String key = getFriendListKey(userId);
+
+        String cacheValue = redisTemplate.opsForValue().get(key);
+        if (StringUtils.isNotBlank(cacheValue)) {
+            try {
+                return objectMapper.readValue(cacheValue, new TypeReference<List<FriendListVO>>() {});
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+        }
+
+        List<FriendListVO> friends = friendshipMapper.selectFriendList(userId);
+
+        try {
+            redisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(friends), 1, TimeUnit.HOURS);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
+        return friends;
     }
 
     @Override

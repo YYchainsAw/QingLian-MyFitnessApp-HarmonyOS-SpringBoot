@@ -8,6 +8,7 @@ import com.yychainsaw.pojo.vo.MovementAnalyticsVO;
 import com.yychainsaw.pojo.vo.MovementVO;
 import com.yychainsaw.service.movementService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 

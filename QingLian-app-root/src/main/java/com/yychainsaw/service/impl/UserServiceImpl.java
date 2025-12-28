@@ -1,8 +1,11 @@
 package com.yychainsaw.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yychainsaw.mapper.UserMapper;
 import com.yychainsaw.pojo.dto.UserUpdateDTO;
 import com.yychainsaw.pojo.entity.User;
@@ -10,8 +13,10 @@ import com.yychainsaw.pojo.vo.UserSocialDashboardVO;
 import com.yychainsaw.pojo.vo.UserVO;
 import com.yychainsaw.service.UserService;
 import com.yychainsaw.utils.ThreadLocalUtil;
+import io.micrometer.common.util.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,6 +32,14 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    private String getUserCacheKey(UUID userId) {
+        return "user:info:" + userId.toString();
+    }
 
     @Override
     public User findByUsername(String username) {
@@ -45,12 +59,31 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserVO getUserInfo() {
         UUID userId = ThreadLocalUtil.getCurrentUserId();
+        String key = getUserCacheKey(userId);
+
+        String cacheValue = redisTemplate.opsForValue().get(key);
+        if (StringUtils.isNotBlank(cacheValue)) {
+            try {
+                return objectMapper.readValue(cacheValue, UserVO.class);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+        }
+
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new RuntimeException("用户不存在");
         }
         UserVO userVO = new UserVO();
         BeanUtils.copyProperties(user, userVO);
+
+        try {
+            String jsonStr = objectMapper.writeValueAsString(userVO);
+            redisTemplate.opsForValue().set(key, jsonStr, 30, java.util.concurrent.TimeUnit.MINUTES);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
         return userVO;
     }
 
@@ -116,7 +149,25 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserSocialDashboardVO getUserSocialDashboard() {
         UUID userId = ThreadLocalUtil.getCurrentUserId();
-        return userMapper.selectUserSocialDashboard(userId);
+        String key = "user:dashboard" + userId;
+
+        String cacheValue = redisTemplate.opsForValue().get(key);
+        if  (StringUtils.isNotBlank(cacheValue)) {
+            try {
+                return objectMapper.readValue(cacheValue, UserSocialDashboardVO.class);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        UserSocialDashboardVO vo = userMapper.selectUserSocialDashboard(userId);
+        try {
+            redisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(vo), 5, TimeUnit.MINUTES);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        return vo;
     }
 
     @Override

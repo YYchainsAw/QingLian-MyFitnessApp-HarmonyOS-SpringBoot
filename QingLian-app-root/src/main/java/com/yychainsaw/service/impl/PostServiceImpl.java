@@ -1,6 +1,10 @@
 package com.yychainsaw.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.yychainsaw.mapper.PostMapper;
@@ -17,6 +21,8 @@ import com.yychainsaw.pojo.vo.PotentialFriendVO;
 import com.yychainsaw.service.PostService;
 import com.yychainsaw.utils.ThreadLocalUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +30,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class PostServiceImpl implements PostService {
@@ -32,6 +39,10 @@ public class PostServiceImpl implements PostService {
     private PostMapper postMapper;
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -51,13 +62,11 @@ public class PostServiceImpl implements PostService {
             }
         }
 
-
         int bonusLikes = 0;
         User user = userMapper.selectById(userId);
         if (user != null && user.getCreatedAt().isBefore(LocalDateTime.now().minusYears(1))) {
             bonusLikes = 10; // 注册超过1年，初始赞 +10
         }
-
 
         Post post = new Post();
         post.setUserId(userId);
@@ -73,6 +82,18 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public PageBean<PostVO> getPostFeed(Integer pageNum, Integer pageSize) {
+        String key = "post:feed:page:" + pageNum + ":size:" + pageSize;
+
+        if (pageNum == 1) {
+            String cacheValue = redisTemplate.opsForValue().get(key);
+            if (StringUtils.isNotBlank(cacheValue)) {
+                try {
+                    return objectMapper.readValue(cacheValue, new TypeReference<PageBean<PostVO>>() {});
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
 
         PageHelper.startPage(pageNum, pageSize);
 
@@ -83,6 +104,13 @@ public class PostServiceImpl implements PostService {
         PageBean<PostVO> pageBean = new PageBean<>();
         pageBean.setTotal(p.getTotal());
         pageBean.setItems(postVOs);
+
+        if (pageNum == 1) {
+            try {
+                redisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(pageBean), 60, TimeUnit.SECONDS);
+            } catch (Exception e) {}
+        }
+
 
         return pageBean;
     }

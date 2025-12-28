@@ -12,20 +12,32 @@ import com.yychainsaw.pojo.entity.WorkoutRecord;
 import com.yychainsaw.service.WorkoutRecordService;
 import com.yychainsaw.utils.ThreadLocalUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class WorkoutRecordServiceImpl implements WorkoutRecordService {
+
     @Autowired
     private WorkoutRecordMapper workoutRecordMapper;
     @Autowired
     private MovementMapper movementMapper;
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
+    private String getTodayCaloriesKey(UUID userId) {
+        return "user:calories:today:" + userId;
+    }
 
     @Override
     public void addWorkoutRecord(WorkoutRecordDTO dto) {
@@ -38,6 +50,8 @@ public class WorkoutRecordServiceImpl implements WorkoutRecordService {
         workoutRecord.setNotes(dto.getNotes());
 
         workoutRecordMapper.insert(workoutRecord);
+
+        redisTemplate.delete(getTodayCaloriesKey(userId));
     }
 
     @Override
@@ -62,6 +76,9 @@ public class WorkoutRecordServiceImpl implements WorkoutRecordService {
         updateWrapper.eq(WorkoutRecord::getRecordId, recordId)
                 .set(WorkoutRecord::getCaloriesBurned, calories);
         workoutRecordMapper.update(null, updateWrapper);
+
+        UUID userId = ThreadLocalUtil.getCurrentUserId();
+        redisTemplate.delete(getTodayCaloriesKey(userId));
     }
 
     @Override
@@ -76,6 +93,16 @@ public class WorkoutRecordServiceImpl implements WorkoutRecordService {
     public Integer getTodayCalories() {
         // Item 10: Today's total calories
         UUID userId = ThreadLocalUtil.getCurrentUserId();
+        String key = getTodayCaloriesKey(userId);
+
+        String cacheValue = redisTemplate.opsForValue().get(key);
+        if (cacheValue != null) {
+            try {
+                return Integer.parseInt(cacheValue);
+            } catch (NumberFormatException e) {
+                e.printStackTrace();
+            }
+        }
 
         QueryWrapper<WorkoutRecord> queryWrapper = new QueryWrapper<>();
         queryWrapper.select("COALESCE(SUM(calories_burned), 0) as total")
@@ -84,10 +111,23 @@ public class WorkoutRecordServiceImpl implements WorkoutRecordService {
                 .apply("DATE(workout_date) = CURRENT_DATE");
 
         Map<String, Object> result = workoutRecordMapper.selectMaps(queryWrapper).stream().findFirst().orElse(null);
+
+        Integer totalCalories = 0;
         if (result != null && result.get("total") != null) {
-            return Integer.parseInt(result.get("total").toString());
+            Object totalObj = result.get("total");
+            if (totalObj instanceof BigDecimal) {
+                totalCalories = ((BigDecimal) totalObj).intValue();
+            } else {
+                totalCalories = Integer.parseInt(totalObj.toString());
+            }
         }
-        return 0;
+
+        long secondsUntilMidnight = Duration.between(LocalDateTime.now(), LocalDateTime.of(LocalDate.now().plusDays(1), LocalTime.MIN)).getSeconds();
+        if (secondsUntilMidnight > 0) {
+            redisTemplate.opsForValue().set(key, String.valueOf(totalCalories), secondsUntilMidnight, TimeUnit.SECONDS);
+        }
+
+        return totalCalories;
     }
 
     @Override
@@ -113,6 +153,8 @@ public class WorkoutRecordServiceImpl implements WorkoutRecordService {
         record.setNotes("专项训练: " + movement.getTitle() + ". " + (dto.getNotes() != null ? dto.getNotes() : ""));
 
         workoutRecordMapper.insert(record);
+
+        redisTemplate.delete(getTodayCaloriesKey(userId));
     }
 
     @Override

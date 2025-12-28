@@ -1,13 +1,15 @@
 package com.yychainsaw.qinglianapp.network
 
+import com.yychainsaw.qinglianapp.utils.TokenManager
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import kotlin.code
 
 object RetrofitClient {
-    private const val BASE_URL = "https://4534bc2e.r7.cpolar.top/"
+    private const val BASE_URL = "https://7ec4c34b.r7.cpolar.top/"
 
     // 全局保存 Token，在 MainActivity 启动或登录成功时赋值
     var authToken: String? = null
@@ -19,7 +21,6 @@ object RetrofitClient {
 
         OkHttpClient.Builder()
             .addInterceptor(logging)
-            // 添加认证拦截器
             .addInterceptor { chain ->
                 val original = chain.request()
                 val requestBuilder = original.newBuilder()
@@ -32,7 +33,17 @@ object RetrofitClient {
 
                 chain.proceed(requestBuilder.build())
             }
+            .addInterceptor { chain ->
+                val request = chain.request()
+                val response = chain.proceed(request)
 
+                // 如果后端返回 401 Unauthorized，说明 Token 过期或无效
+                if (response.code == 401) {
+                    TokenManager.notifyTokenExpired()
+                }
+
+                response
+            }
             .connectTimeout(5, TimeUnit.MINUTES)
             .readTimeout(5, TimeUnit.MINUTES)
             .writeTimeout(5, TimeUnit.MINUTES)

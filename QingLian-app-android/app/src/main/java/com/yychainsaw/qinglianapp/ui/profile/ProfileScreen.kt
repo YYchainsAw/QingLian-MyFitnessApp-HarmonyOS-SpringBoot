@@ -90,16 +90,6 @@ fun ProfileScreen(navController: NavController) {
                 .background(QingLianYellow)
                 .padding(24.dp)
         ) {
-            // 设置按钮
-            IconButton(
-                onClick = { navController.navigate("settings") },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 24.dp)
-            ) {
-                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.Black)
-            }
-
             if (isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.align(Alignment.Center))
             } else {
@@ -144,6 +134,16 @@ fun ProfileScreen(navController: NavController) {
 
                     Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.Black)
                 }
+            }
+
+            // 设置按钮 - 移到最后以确保在最上层，并调整位置避免遮挡
+            IconButton(
+                onClick = { navController.navigate("settings") },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                // 移除额外的 padding(top = 24.dp)，让它更靠上，避免与用户信息行重叠
+            ) {
+                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.Black)
             }
         }
 

@@ -1,6 +1,10 @@
 package com.yychainsaw.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yychainsaw.mapper.ChatGroupMapper;
 import com.yychainsaw.mapper.GroupMemberMapper;
 import com.yychainsaw.mapper.MessageMapper;
@@ -14,6 +18,7 @@ import com.yychainsaw.service.GroupService; // 需自行创建接口定义
 import com.yychainsaw.utils.ThreadLocalUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,17 +35,22 @@ public class GroupServiceImpl implements GroupService {
     private MessageMapper messageMapper;
     @Autowired
     private ChatGroupMapper chatGroupMapper;
-    
+    @Autowired
+    private StringRedisTemplate redisTemplate;
     @Autowired
     private GroupMemberMapper groupMemberMapper;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private UserMapper userMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class) // 确保有事务注解
     public void addMember(Long groupId, UUID userId) {
-        // 1. 校验用户是否存在 (建议先注释掉这行，排除 UserMapper 的问题，直接测试插入)
-        // if (userMapper.selectById(userId) == null) {
-        //    throw new RuntimeException("用户不存在");
-        // }
+
+        if (userMapper.selectById(userId) == null) {
+           throw new RuntimeException("用户不存在");
+        }
 
         // 2. 检查是否已经是成员
         QueryWrapper<GroupMember> query = new QueryWrapper<>();
@@ -59,14 +70,35 @@ public class GroupServiceImpl implements GroupService {
 
         int rows = groupMemberMapper.insert(member);
         System.out.println("插入成员结果: " + rows + ", GroupID: " + groupId + ", UserID: " + userId);
+        if (rows > 0) {
+            redisTemplate.delete("group:members:" + groupId);
+        }
     }
 
     @Override
     public List<GroupMember> getGroupMembers(Long groupId) {
+        String key = "group:members:" + groupId;
+
+        String cache = redisTemplate.opsForValue().get(key);
+        if (StringUtils.isBlank(cache)) {
+            try {
+                return objectMapper.readValue(cache, new TypeReference<List<GroupMember>>() {});
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         QueryWrapper<GroupMember> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("group_id", groupId);
+        List<GroupMember> members = groupMemberMapper.selectList(queryWrapper);
 
-        return groupMemberMapper.selectList(queryWrapper);
+        try {
+            redisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(members), 2, TimeUnit.HOURS);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        return members;
     }
 
     @Override

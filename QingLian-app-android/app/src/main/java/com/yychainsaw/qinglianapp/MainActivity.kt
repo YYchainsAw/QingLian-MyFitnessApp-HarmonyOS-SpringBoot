@@ -2,17 +2,19 @@ package com.yychainsaw.qinglianapp
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log // 导入 Log
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect // 新增导入
+import androidx.compose.ui.platform.LocalContext // 新增导入
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.yychainsaw.qinglianapp.network.RetrofitClient // 导入 RetrofitClient
+import com.yychainsaw.qinglianapp.network.RetrofitClient
 import com.yychainsaw.qinglianapp.network.WebSocketManager
 import com.yychainsaw.qinglianapp.service.WebSocketService
 import com.yychainsaw.qinglianapp.ui.friend.AddFriendScreen
@@ -34,24 +36,22 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ================== 修复开始：App 启动时恢复 Token ==================
+        // ================== App 启动时恢复 Token ==================
         val savedToken = TokenManager.getToken(this)
         if (!savedToken.isNullOrEmpty()) {
-            // 将持久化的 Token 赋值给 RetrofitClient 的内存变量
             RetrofitClient.authToken = savedToken
             Log.d("MainActivity", "Token 已从本地存储恢复，RetrofitClient 已就绪")
         } else {
             Log.d("MainActivity", "本地无 Token，需要登录")
         }
-        // ================== 修复结束 ==================
 
-        // 1. 初始化通知渠道 (必须)
+        // 1. 初始化通知渠道
         NotificationHelper.createNotificationChannel(this)
 
-        // 2. 启动 WebSocket 服务 (用于后台保活)
+        // 2. 启动 WebSocket 服务
         startService(Intent(this, WebSocketService::class.java))
 
-        // 3. 全局监听 WebSocket 消息 -> 触发系统通知
+        // 3. 全局监听 WebSocket 消息
         lifecycleScope.launch {
             WebSocketManager.messageFlow.collect { message ->
                 if (AppState.currentChatFriendId != message.senderId || !AppState.isAppInForeground) {
@@ -67,12 +67,33 @@ class MainActivity : ComponentActivity() {
         setContent {
             QingLianAppTheme {
                 val navController = rememberNavController()
+                val context = LocalContext.current // 获取 Compose 上下文
+
+                // ================== 新增：全局监听 Token 过期事件 ==================
+                LaunchedEffect(Unit) {
+                    TokenManager.tokenExpiredEvent.collect {
+                        Log.d("MainActivity", "收到 Token 过期事件，执行强制退出")
+
+                        // 1. 清除本地 Token 和内存中的 Token
+                        TokenManager.clearToken(context)
+                        RetrofitClient.authToken = null
+
+                        // 2. 停止 WebSocket 服务
+                        val intent = Intent(context, WebSocketService::class.java)
+                        context.stopService(intent)
+
+                        // 3. 强制跳转回登录页，并清空返回栈
+                        navController.navigate("login") {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                }
+                // ===============================================================
 
                 // 判断初始页面
                 val startDestination = if (TokenManager.getToken(this).isNullOrEmpty()) "login" else "main"
 
                 NavHost(navController = navController, startDestination = startDestination) {
-                    // ... (保持原有的路由配置不变) ...
                     composable("login") { LoginScreen(navController) }
                     composable("main") { MainScreen(navController) }
                     composable("add_friend") { AddFriendScreen(navController) }
@@ -108,7 +129,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ... (onResume, onPause 保持不变) ...
     override fun onResume() {
         super.onResume()
         AppState.isAppInForeground = true
