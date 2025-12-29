@@ -15,8 +15,11 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class MessageServiceImpl implements MessageService {
@@ -34,6 +37,8 @@ public class MessageServiceImpl implements MessageService {
         message.setContent(dto.getContent());
         message.setSenderId(senderId); // 获取当前登录用户
 
+        message.setType(dto.getType() != null ? dto.getType() : "TEXT");
+
         if (dto.getGroupId() != null) {
             // 群聊设置
             message.setGroupId(dto.getGroupId());
@@ -47,7 +52,7 @@ public class MessageServiceImpl implements MessageService {
         }
         // 2. 插入数据库 (MyBatis 会自动回填 ID 到 message 对象中)
         messageMapper.insert(message);
-
+        User sender = userMapper.selectById(senderId);
         // 3. 构建并返回 VO (这是 Controller 需要的数据)
         MessageVO vo = new MessageVO();
         vo.setId(message.getMsgId()); // 确保 Mapper XML 配置了 useGeneratedKeys="true"
@@ -57,6 +62,9 @@ public class MessageServiceImpl implements MessageService {
         vo.setContent(message.getContent());
         vo.setSentAt(message.getSentAt());
         vo.setIsRead(message.getIsRead());
+        vo.setSenderNickname(sender.getNickname());
+        vo.setSenderAvatar(sender.getAvatarUrl());
+        vo.setType(message.getType());
 
         return vo;
     }
@@ -100,5 +108,43 @@ public class MessageServiceImpl implements MessageService {
         query.eq("group_id", groupId);
         query.orderByDesc("sent_at");
         return messageMapper.selectList(query);
+    }
+
+    @Override
+    public List<MessageVO> transferToVOList(List<Message> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 1. 提取所有发送者 ID (去重)
+        List<UUID> userIds = messages.stream()
+                .map(Message::getSenderId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 2. 批量查询用户信息
+        List<User> users = userMapper.selectBatchIds(userIds);
+        Map<UUID, User> userMap = users.stream()
+                .collect(Collectors.toMap(User::getUserId, u -> u));
+
+        // 3. 转换 Message -> MessageVO
+        return messages.stream().map(msg -> {
+            MessageVO vo = new MessageVO();
+            vo.setId(msg.getMsgId());
+            vo.setSenderId(msg.getSenderId().toString());
+            vo.setReceiverId(msg.getReceiverId() != null ? msg.getReceiverId().toString() : null);
+            vo.setContent(msg.getContent());
+            vo.setSentAt(msg.getSentAt());
+            vo.setIsRead(msg.getIsRead());
+
+            // 填充用户信息
+            User u = userMap.get(msg.getSenderId());
+            if (u != null) {
+                vo.setSenderName(u.getUsername());
+                vo.setSenderNickname(u.getNickname());
+                vo.setSenderAvatar(u.getAvatarUrl()); // 确保 User 实体中有 getAvatarUrl
+            }
+            return vo;
+        }).collect(Collectors.toList());
     }
 }

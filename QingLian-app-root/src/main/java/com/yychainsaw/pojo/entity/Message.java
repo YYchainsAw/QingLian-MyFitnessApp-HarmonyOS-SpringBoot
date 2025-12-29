@@ -30,4 +30,6 @@ public class Message {
 
     @TableField(value = "sent_at", fill = FieldFill.INSERT)
     private LocalDateTime sentAt;
+
+    private String type;
 }

@@ -2,7 +2,6 @@ package com.yychainsaw.qinglianapp.network
 
 import com.yychainsaw.qinglianapp.data.model.ApiResponse
 import com.yychainsaw.qinglianapp.data.model.dto.*
-import com.yychainsaw.qinglianapp.data.model.entity.MessageEntity
 import com.yychainsaw.qinglianapp.data.model.vo.*
 import okhttp3.MultipartBody
 import retrofit2.http.*
@@ -48,7 +47,7 @@ interface ApiService {
     suspend fun getMessageHistory(@Path("friendId") friendId: String,
                                   @Query("pageNum") pageNum: Int = 1,
                                   @Query("pageSize") pageSize: Int = 20
-    ): ApiResponse<PageBean<MessageEntity>>
+    ): ApiResponse<PageBean<MessageVO>>
 
     @PUT("messages/read/{senderId}")
     suspend fun markAsRead(@Path("senderId") senderId: String): ApiResponse<Void>
@@ -199,10 +198,10 @@ interface ApiService {
         @Path("groupId") groupId: Long,
         @Query("pageNum") pageNum: Int = 1,
         @Query("pageSize") pageSize: Int = 20
-    ): ApiResponse<PageBean<MessageEntity>>
+    ): ApiResponse<PageBean<MessageVO>>
 }
 
 // 辅助类保持不变
 data class MessageHistoryResponse(
-    val items: List<MessageEntity>
+    val items: List<MessageVO>
 )

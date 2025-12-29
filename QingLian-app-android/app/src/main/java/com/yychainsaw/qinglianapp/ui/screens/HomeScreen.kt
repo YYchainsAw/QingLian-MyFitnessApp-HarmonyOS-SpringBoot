@@ -1,3 +1,4 @@
+// file: app/src/main/java/com/yychainsaw/qinglianapp/ui/screens/HomeScreen.kt
 package com.yychainsaw.qinglianapp.ui.screens
 
 import androidx.compose.foundation.background
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.yychainsaw.qinglianapp.data.model.vo.PostVO
 
 import com.yychainsaw.qinglianapp.ui.theme.BackgroundWhite
 import com.yychainsaw.qinglianapp.ui.theme.QingLianBlue
@@ -45,10 +47,10 @@ fun HomeScreen() {
                 Text("热门动态", fontSize = 24.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
             }
-            
+
             // 循环生成 5 个假卡片 (之后替换为 API 数据)
             items(5) { index ->
-                CommunityCard(index)
+                CommunityCard(index) // 传入 Int 类型的 index
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
@@ -56,7 +58,7 @@ fun HomeScreen() {
 }
 
 @Composable
-fun CommunityCard(index: Int) {
+fun CommunityCard(index: Int) { // 修复：将参数类型从 PostVO 改回 Int
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -73,14 +75,14 @@ fun CommunityCard(index: Int) {
                     Text("2小时前", fontSize = 12.sp, color = Color.Gray)
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // 内容
             Text("今天完成了 50 个波比跳，感觉人生到达了巅峰！#健身 #打卡")
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // 图片占位
             Box(
                 modifier = Modifier
@@ -89,16 +91,16 @@ fun CommunityCard(index: Int) {
                     .clip(RoundedCornerShape(8.dp))
                     .background(Color.LightGray)
             ) {
-                 // 实际使用：AsyncImage(model = "url", contentDescription = null)
-                 Text("图片区域", modifier = Modifier.align(Alignment.Center))
+                // 实际使用：AsyncImage(model = "url", contentDescription = null)
+                Text("图片区域", modifier = Modifier.align(Alignment.Center))
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // 底部互动栏
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.FavoriteBorder, 
+                    imageVector = Icons.Default.FavoriteBorder,
                     contentDescription = "Like",
                     tint = QingLianYellow // 点赞图标用黄色
                 )

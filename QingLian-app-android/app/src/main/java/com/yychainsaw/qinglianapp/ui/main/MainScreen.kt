@@ -1,6 +1,12 @@
+// file: app/src/main/java/com/yychainsaw/qinglianapp/ui/main/MainScreen.kt
 package com.yychainsaw.qinglianapp.ui.main
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -18,8 +24,12 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.yychainsaw.qinglianapp.ui.MainViewModel
@@ -63,49 +73,86 @@ fun MainScreen(
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                containerColor = QingLianYellow.copy(alpha = 0.1f)
+            // 使用 Surface 添加阴影，增加层次感
+            Surface(
+                shadowElevation = 16.dp,
+                color = Color.White,
+                tonalElevation = 8.dp
             ) {
-                items.forEachIndexed { index, item ->
-                    NavigationBarItem(
-                        selected = selectedItemIndex == index,
-                        onClick = { selectedItemIndex = index },
-                        label = { Text(item.label) },
-                        icon = {
-                            BadgedBox(
-                                badge = {
-                                    if (item.hasBadge && unreadCount > 0) {
-                                        Badge {
-                                            Text(text = if (unreadCount > 99) "99+" else unreadCount.toString())
+                NavigationBar(
+                    containerColor = Color.White,
+                    tonalElevation = 0.dp // 由 Surface 接管阴影
+                ) {
+                    items.forEachIndexed { index, item ->
+                        val isSelected = selectedItemIndex == index
+
+                        // 图标弹性缩放动画
+                        val scale by animateFloatAsState(
+                            targetValue = if (isSelected) 1.2f else 1.0f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            ),
+                            label = "iconScale"
+                        )
+
+                        NavigationBarItem(
+                            selected = isSelected,
+                            onClick = { selectedItemIndex = index },
+                            label = {
+                                Text(
+                                    text = item.label,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 11.sp
+                                )
+                            },
+                            icon = {
+                                BadgedBox(
+                                    badge = {
+                                        if (item.hasBadge && unreadCount > 0) {
+                                            Badge(
+                                                containerColor = Color.Red,
+                                                contentColor = Color.White
+                                            ) {
+                                                Text(
+                                                    text = if (unreadCount > 99) "99+" else unreadCount.toString(),
+                                                    fontSize = 10.sp
+                                                )
+                                            }
                                         }
                                     }
+                                ) {
+                                    Icon(
+                                        imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                                        contentDescription = item.label,
+                                        modifier = Modifier.scale(scale) // 应用缩放动画
+                                    )
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = if (index == selectedItemIndex) item.selectedIcon else item.unselectedIcon,
-                                    contentDescription = item.label
-                                )
-                            }
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = QingLianBlue,
-                            selectedTextColor = QingLianBlue,
-                            indicatorColor = QingLianGreen.copy(alpha = 0.3f),
-                            unselectedIconColor = Color.Gray,
-                            unselectedTextColor = Color.Gray
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = QingLianBlue,
+                                selectedTextColor = QingLianBlue,
+                                indicatorColor = QingLianYellow.copy(alpha = 0.4f), // 更柔和的指示器颜色
+                                unselectedIconColor = Color.Gray,
+                                unselectedTextColor = Color.Gray
+                            ),
+                            alwaysShowLabel = true
                         )
-                    )
+                    }
                 }
             }
         }
     ) { innerPadding ->
-        Box(
+        // 使用 Crossfade 实现平滑的页面切换动画
+        Crossfade(
+            targetState = selectedItemIndex,
+            label = "MainScreenTransition",
+            animationSpec = tween(durationMillis = 300),
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
-            contentAlignment = Alignment.Center
-        ) {
-            when (selectedItemIndex) {
+                .padding(innerPadding)
+        ) { targetIndex ->
+            when (targetIndex) {
                 0 -> CommunityScreen(
                     onPostCreate = { navController.navigate("post_create") }
                 )

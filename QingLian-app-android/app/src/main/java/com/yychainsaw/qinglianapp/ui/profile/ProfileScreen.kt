@@ -179,7 +179,7 @@ fun ProfileScreen(navController: NavController) {
         Column(modifier = Modifier.padding(top = 0.dp)) {
             MenuItem(text = "我的好友") { navController.navigate("friends") }
             MenuItem(text = "健身记录") { navController.navigate("records") }
-            MenuItem(text = "数据看板") { /* TODO: 跳转数据看板 */ }
+            MenuItem(text = "数据看板") { navController.navigate("dashboard")}
         }
     }
 }

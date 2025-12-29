@@ -1,6 +1,7 @@
 package com.yychainsaw.qinglianapp.utils
 
 import android.content.Context
+import android.content.SharedPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -12,32 +13,60 @@ object TokenManager {
     private const val PREF_NAME = "auth_prefs"
     private const val KEY_TOKEN = "jwt_token"
 
-    // 1. 定义全局的 Token 过期事件流
+    // 持有 SharedPreferences 实例，解决 RetrofitClient 无法获取 Context 的问题
+    private var preferences: SharedPreferences? = null
+
+    // Token 过期事件流
     private val _tokenExpiredEvent = MutableSharedFlow<Unit>()
     val tokenExpiredEvent = _tokenExpiredEvent.asSharedFlow()
 
-    // 用于发射事件的协程作用域
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    // 2. 提供给拦截器调用的方法，当检测到 401 时调用
+    /**
+     * 必须在 Application 的 onCreate 中调用此方法进行初始化
+     */
+    fun init(context: Context) {
+        preferences = context.applicationContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+    }
+
     fun notifyTokenExpired() {
         scope.launch {
             _tokenExpiredEvent.emit(Unit)
         }
     }
 
+    // ============================================================
+    // 新增：无参方法 (供 RetrofitClient 等无 Context 环境使用)
+    // ============================================================
+
+    fun getToken(): String? {
+        return preferences?.getString(KEY_TOKEN, null)
+    }
+
+    fun saveToken(token: String) {
+        preferences?.edit()?.putString(KEY_TOKEN, token)?.apply()
+    }
+
+    fun clearToken() {
+        preferences?.edit()?.remove(KEY_TOKEN)?.apply()
+    }
+
+    // ============================================================
+    // 兼容旧代码：带 Context 的方法 (自动初始化)
+    // ============================================================
+
     fun saveToken(context: Context, token: String) {
-        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putString(KEY_TOKEN, token).apply()
+        if (preferences == null) init(context)
+        saveToken(token)
     }
 
     fun getToken(context: Context): String? {
-        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-        return prefs.getString(KEY_TOKEN, null)
+        if (preferences == null) init(context)
+        return getToken()
     }
 
     fun clearToken(context: Context) {
-        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-        prefs.edit().remove(KEY_TOKEN).apply()
+        if (preferences == null) init(context)
+        clearToken()
     }
 }

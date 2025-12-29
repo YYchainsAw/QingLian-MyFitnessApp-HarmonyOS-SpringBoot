@@ -80,7 +80,7 @@ public class GroupServiceImpl implements GroupService {
         String key = "group:members:" + groupId;
 
         String cache = redisTemplate.opsForValue().get(key);
-        if (StringUtils.isBlank(cache)) {
+        if (StringUtils.isNotBlank(cache)) {
             try {
                 return objectMapper.readValue(cache, new TypeReference<List<GroupMember>>() {});
             } catch (JsonProcessingException e) {

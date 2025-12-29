@@ -75,52 +75,40 @@ public class MessageController {
     }
 
     @GetMapping("/history/{friendId}")
-    public Result<PageBean<Message>> getChatHistory(
+    public Result<PageBean<MessageVO>> getChatHistory(
             @PathVariable String friendId,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "20") Integer pageSize) {
 
-        // 1. 开启分页 (SQL 必须是 ORDER BY created_at DESC)
         PageHelper.startPage(pageNum, pageSize);
-
-        // 2. 执行查询
         List<Message> history = messageService.getChatHistory(UUID.fromString(friendId));
-
-        // 3. 使用 PageInfo 获取正确的 total (总条数)
-        // PageHelper 会自动拦截 SQL 计算总数，必须这一步
         PageInfo<Message> pageInfo = new PageInfo<>(history);
 
-        // 4. 核心修复：反转列表顺序 (为了前端展示习惯：旧 -> 新)
         List<Message> resultList = pageInfo.getList();
         Collections.reverse(resultList);
 
-        // 5. 封装到自定义 PageBean
-        PageBean<Message> pageBean = new PageBean<>(pageInfo.getTotal(), resultList);
+        List<MessageVO> voList = messageService.transferToVOList(resultList);
 
+        PageBean<MessageVO> pageBean = new PageBean<>(pageInfo.getTotal(), voList);
         return Result.success(pageBean);
     }
 
     @GetMapping("/groups/{groupId}/history")
-    public Result<PageBean<Message>> getGroupChatHistory(
+    public Result<PageBean<MessageVO>> getGroupChatHistory(
             @PathVariable Long groupId,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "20") Integer pageSize) {
 
-        // 1. 开启分页
         PageHelper.startPage(pageNum, pageSize);
-
-        // 2. 调用 Service 查询群消息
         List<Message> history = messageService.getGroupChatHistory(groupId);
-
-        // 3. 获取分页信息
         PageInfo<Message> pageInfo = new PageInfo<>(history);
 
-        // 4. 反转列表 (旧 -> 新) 供前端展示
         List<Message> resultList = pageInfo.getList();
         Collections.reverse(resultList);
 
-        // 5. 封装返回
-        PageBean<Message> pageBean = new PageBean<>(pageInfo.getTotal(), resultList);
+        List<MessageVO> voList = messageService.transferToVOList(resultList);
+
+        PageBean<MessageVO> pageBean = new PageBean<>(pageInfo.getTotal(), voList);
         return Result.success(pageBean);
     }
 }

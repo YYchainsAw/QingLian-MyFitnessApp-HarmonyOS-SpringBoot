@@ -21,8 +21,10 @@ import com.yychainsaw.qinglianapp.ui.community.CommunityScreen
 import com.yychainsaw.qinglianapp.ui.community.PostCreateScreen
 import com.yychainsaw.qinglianapp.ui.friend.AddFriendScreen
 import com.yychainsaw.qinglianapp.ui.login.LoginScreen
+import com.yychainsaw.qinglianapp.ui.login.RegisterScreen
 import com.yychainsaw.qinglianapp.ui.main.MainScreen
 import com.yychainsaw.qinglianapp.ui.message.ChatScreen
+import com.yychainsaw.qinglianapp.ui.profile.DashboardScreen
 import com.yychainsaw.qinglianapp.ui.profile.EditProfileScreen
 import com.yychainsaw.qinglianapp.ui.profile.FriendsScreen
 import com.yychainsaw.qinglianapp.ui.profile.ProfileScreen
@@ -97,6 +99,7 @@ class MainActivity : ComponentActivity() {
 
                 NavHost(navController = navController, startDestination = startDestination) {
                     composable("login") { LoginScreen(navController) }
+                    composable("register") { RegisterScreen(navController) }
                     composable("main") { MainScreen(navController) }
                     composable("add_friend") { AddFriendScreen(navController) }
                     composable("settings") { SettingsScreen(navController) }
@@ -105,6 +108,7 @@ class MainActivity : ComponentActivity() {
                     composable("profile") { ProfileScreen(navController) }
                     composable("edit_profile") { EditProfileScreen(navController) }
                     composable("post_create") { PostCreateScreen(navController) }
+                    composable("dashboard") { DashboardScreen(navController) }
                     composable("community") {
                         CommunityScreen(
                             onPostCreate = { navController.navigate("post_create") }

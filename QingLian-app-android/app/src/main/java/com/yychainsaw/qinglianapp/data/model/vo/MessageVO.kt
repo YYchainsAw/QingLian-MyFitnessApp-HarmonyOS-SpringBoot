@@ -4,9 +4,12 @@ data class MessageVO(
     val id: Long,
     val senderId: String,
     val senderName: String? = null,
+    val senderNickname: String? = null,
+    val senderAvatar: String? = null,
     val receiverId: String? = null,
     val groupId: Long? = null,
     val content: String,
     val sentAt: String,
-    val isRead: Boolean
+    val isRead: Boolean,
+    val type: String
 )

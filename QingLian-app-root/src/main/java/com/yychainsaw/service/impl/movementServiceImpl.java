@@ -77,39 +77,43 @@ public class movementServiceImpl implements movementService {
         //  查数据库
         PageHelper.startPage(pageNum, pageSize);
 
-        LambdaQueryWrapper<Movement> queryWrapper = new LambdaQueryWrapper<>();
-        if (!safeKeyword.isEmpty()) {
-            queryWrapper.and(wrapper -> wrapper
-                    .like(Movement::getTitle, safeKeyword)
-                    .or()
-                    .like(Movement::getDescription, safeKeyword)
-            );
-        }
-        // 默认按热度或时间排序，防止分页数据抖动
-        queryWrapper.orderByDesc(Movement::getDifficultyLevel);
-
-        List<Movement> movements = movementMapper.selectList(queryWrapper);
-
-        // 封装结果
-        Page<Movement> p = (Page<Movement>) movements;
-        PageBean<MovementVO> pageBean = new PageBean<>();
-        pageBean.setTotal(p.getTotal());
-
-        List<MovementVO> vos = movements.stream().map(m -> {
-            MovementVO vo = new MovementVO();
-            BeanUtils.copyProperties(m, vo);
-            return vo;
-        }).collect(Collectors.toList());
-        pageBean.setItems(vos);
-
-        // 写缓存
         try {
-            redisTemplate.opsForValue().set(cacheKey, objectMapper.writeValueAsString(pageBean), 24 * 7, TimeUnit.HOURS);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
+            LambdaQueryWrapper<Movement> queryWrapper = new LambdaQueryWrapper<>();
+            if (!safeKeyword.isEmpty()) {
+                queryWrapper.and(wrapper -> wrapper
+                        .like(Movement::getTitle, safeKeyword)
+                        .or()
+                        .like(Movement::getDescription, safeKeyword)
+                );
+            }
+            // 默认按热度或时间排序，防止分页数据抖动
+            queryWrapper.orderByDesc(Movement::getDifficultyLevel);
 
-        return pageBean;
+            List<Movement> movements = movementMapper.selectList(queryWrapper);
+
+            // 封装结果
+            Page<Movement> p = (Page<Movement>) movements;
+            PageBean<MovementVO> pageBean = new PageBean<>();
+            pageBean.setTotal(p.getTotal());
+
+            List<MovementVO> vos = movements.stream().map(m -> {
+                MovementVO vo = new MovementVO();
+                BeanUtils.copyProperties(m, vo);
+                return vo;
+            }).collect(Collectors.toList());
+            pageBean.setItems(vos);
+
+            // 写缓存
+            try {
+                redisTemplate.opsForValue().set(cacheKey, objectMapper.writeValueAsString(pageBean), 24 * 7, TimeUnit.HOURS);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+
+            return pageBean;
+        } finally {
+            PageHelper.clearPage();
+        }
     }
 
     @Override

@@ -20,4 +20,5 @@ public interface MessageService {
 
     List<Message> getGroupChatHistory(Long groupId);
 
+    List<MessageVO> transferToVOList(List<Message> messages);
 }

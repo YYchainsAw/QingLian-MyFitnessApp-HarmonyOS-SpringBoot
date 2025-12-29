@@ -246,7 +246,8 @@ fun GroupItemView(group: ChatGroupVO, onClick: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = group.name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF333333))
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = group.lastMessage ?: "暂无消息", fontSize = 13.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // 【修改】使用 getPreviewContent 处理消息预览
+            Text(text = getPreviewContent(group.lastMessage) ?: "暂无消息", fontSize = 13.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(text = formatFriendlyTime(group.lastMessageTime), fontSize = 11.sp, color = Color.LightGray)
@@ -283,7 +284,8 @@ fun FriendItemView(friend: FriendVO, onClick: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = friend.nickname?.takeIf { it.isNotBlank() } ?: friend.username, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF333333))
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = friend.lastMessage ?: "点击开始聊天", fontSize = 13.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // 【修改】使用 getPreviewContent 处理消息预览
+            Text(text = getPreviewContent(friend.lastMessage) ?: "点击开始聊天", fontSize = 13.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(text = formatFriendlyTime(friend.lastMessageTime), fontSize = 11.sp, color = Color.LightGray)
@@ -399,4 +401,15 @@ fun formatFriendlyTime(timeStr: String?): String {
     } catch (e: Exception) {
         return ""
     }
+}
+
+// 【新增】辅助函数：判断内容是否为图片，如果是则返回 "[图片]"
+private fun getPreviewContent(content: String?): String? {
+    if (content.isNullOrBlank()) return null
+    val lower = content.lowercase()
+    val isImage = lower.endsWith(".jpg") || lower.endsWith(".jpeg") ||
+            lower.endsWith(".png") || lower.endsWith(".gif") ||
+            lower.endsWith(".webp") ||
+            lower.contains("oss-cn-") // 匹配阿里云 OSS 链接特征
+    return if (isImage) "[图片]" else content
 }

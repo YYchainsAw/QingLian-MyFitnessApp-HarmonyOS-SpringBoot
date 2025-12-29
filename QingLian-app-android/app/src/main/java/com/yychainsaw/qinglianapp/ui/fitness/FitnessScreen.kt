@@ -1,3 +1,4 @@
+// file: app/src/main/java/com/yychainsaw/qinglianapp/ui/fitness/FitnessScreen.kt
 package com.yychainsaw.qinglianapp.ui.fitness
 
 import android.net.Uri
@@ -41,7 +42,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-// 辅助函数：解析图片 URL (与 CommunityScreen 类似)
+// 辅助函数：解析图片 URL
 fun resolveFitnessImageUrl(url: String?): String {
     if (url.isNullOrBlank()) return ""
     if (url.startsWith("http://") || url.startsWith("https://")) {
@@ -82,7 +83,7 @@ fun FitnessScreen() {
     fun performSearch(keyword: String?) {
         scope.launch {
             try {
-                val res = RetrofitClient.apiService.searchMovements(keyword)
+                val res = RetrofitClient.apiService.searchMovements(keyword = keyword)
                 if (res.isSuccess()) {
                     movementList = res.data?.items ?: emptyList()
                 }
@@ -95,14 +96,29 @@ fun FitnessScreen() {
     fun refreshDashboard() {
         scope.launch {
             try {
-                val calRes = RetrofitClient.apiService.getTodayCalories()
-                if (calRes.isSuccess()) todayCalories = calRes.data ?: 0
+                // 1. 获取今日消耗 (逻辑与 DashboardScreen 保持一致：拉取历史记录并在本地计算)
+                val historyRes = RetrofitClient.apiService.getWorkoutHistory()
+                if (historyRes.isSuccess() && historyRes.data != null) {
+                    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    val todayStr = sdf.format(Date())
 
-                val planRes = RetrofitClient.apiService.getActivePlans()
-                if (planRes.isSuccess()) activePlans = planRes.data ?: emptyList()
+                    // 过滤出今天的记录并累加卡路里
+                    todayCalories = historyRes.data.filter {
+                        it.workoutDate.startsWith(todayStr)
+                    }.sumOf { it.caloriesBurned }
+                }
 
+                // 2. 获取活跃计划
+                val plansRes = RetrofitClient.apiService.getActivePlans()
+                if (plansRes.isSuccess()) {
+                    activePlans = plansRes.data ?: emptyList()
+                }
+
+                // 3. 获取排行榜
                 val rankRes = RetrofitClient.apiService.getBurnLeaderboard()
-                if (rankRes.isSuccess()) leaderboard = rankRes.data ?: emptyList()
+                if (rankRes.isSuccess()) {
+                    leaderboard = rankRes.data ?: emptyList()
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -115,8 +131,10 @@ fun FitnessScreen() {
         try {
             val catRes = RetrofitClient.apiService.countMovementCategories()
             if (catRes.isSuccess()) categories = catRes.data ?: emptyList()
+
             val hardRes = RetrofitClient.apiService.getHardcoreMovements()
             if (hardRes.isSuccess()) hardcoreMovements = hardRes.data ?: emptyList()
+
             performSearch(null)
             refreshDashboard()
         } catch (e: Exception) {
@@ -129,11 +147,10 @@ fun FitnessScreen() {
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showAddMovementDialog = true },
-                containerColor = QingLianYellow,
-                contentColor = Color.Black
+                onClick = { showLogWorkoutDialog = true },
+                containerColor = QingLianYellow
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Movement")
+                Icon(Icons.Default.Add, contentDescription = "快速记录")
             }
         },
         containerColor = Color(0xFFF5F7FA)
@@ -144,56 +161,65 @@ fun FitnessScreen() {
             }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                // 1. 顶部概览卡片
+                // 1. 顶部数据概览
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = QingLianBlue),
-                        shape = RoundedCornerShape(16.dp)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.White)
+                            .padding(16.dp)
                     ) {
-                        Column(modifier = Modifier.padding(20.dp)) {
-                            Text("今日消耗 (Kcal)", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("$todayCalories", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                ToolItem(Icons.Default.Timer, "计时器", Color.White) { showTimerDialog = true }
-                                ToolItem(Icons.Default.Calculate, "BMI计算", Color.White) { showBMIDialog = true }
-                                ToolItem(Icons.Default.Leaderboard, "排行榜", Color.White) { showLeaderboardDialog = true }
-                                ToolItem(Icons.Default.EditCalendar, "打卡", Color.White) { showLogWorkoutDialog = true }
+                        Text("今日运动", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text("今日消耗 (Kcal)", color = Color.Gray, fontSize = 12.sp)
+                                Text("$todayCalories", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = QingLianBlue)
+                            }
+                            // 工具栏
+                            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                                ToolItem(Icons.Default.Timer, "计时器", QingLianBlue) { showTimerDialog = true }
+                                ToolItem(Icons.Default.Calculate, "BMI", QingLianBlue) { showBMIDialog = true }
+                                ToolItem(Icons.Default.Leaderboard, "排行榜", QingLianYellow) { showLeaderboardDialog = true }
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                // 2. 进行中的计划
-                if (activePlans.isNotEmpty()) {
-                    item {
-                        Text("进行中的计划", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(activePlans) { plan ->
-                                PlanCard(plan)
+                // 2. 我的计划
+                item {
+                    if (activePlans.isNotEmpty()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("我的计划", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                items(activePlans) { plan ->
+                                    PlanCard(plan)
+                                }
                             }
                         }
                     }
                 }
 
                 // 3. 硬核动作推荐
-                if (hardcoreMovements.isNotEmpty()) {
-                    item {
-                        Text("硬核挑战", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(hardcoreMovements) { mv ->
-                                HardcoreCard(mv) { playingVideoUrl = mv.videoUrl }
+                item {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Text("硬核挑战", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(hardcoreMovements) { movement ->
+                                HardcoreCard(movement) {
+                                    playingVideoUrl = resolveFitnessImageUrl(movement.imageUrl)
+                                }
                             }
                         }
                     }
@@ -202,8 +228,10 @@ fun FitnessScreen() {
                 // 4. 动作库搜索与列表
                 item {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("动作库", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text("动作库", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(8.dp))
+
+                        // 搜索框
                         OutlinedTextField(
                             value = searchText,
                             onValueChange = {
@@ -211,7 +239,7 @@ fun FitnessScreen() {
                                 performSearch(it.ifBlank { null })
                             },
                             placeholder = { Text("搜索动作...") },
-                            leadingIcon = { Icon(Icons.Default.Search, null) },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -219,18 +247,41 @@ fun FitnessScreen() {
                                 unfocusedContainerColor = Color.White
                             )
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+
                         // 分类 Chips
+                        Spacer(modifier = Modifier.height(8.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(categories) { cat ->
-                                CategoryChip(cat) { performSearch(cat.category) }
+                                CategoryChip(cat) {
+                                    searchText = cat.category
+                                    performSearch(cat.category)
+                                }
                             }
                         }
                     }
                 }
 
-                items(movementList) { mv ->
-                    MovementListItem(mv) { playingVideoUrl = mv.videoUrl }
+                // 5. 动作列表内容
+                items(movementList) { movement ->
+                    MovementListItem(movement) {
+                        // 点击动作可以查看详情或播放视频
+                        if (!movement.imageUrl.isNullOrBlank()) {
+                            playingVideoUrl = resolveFitnessImageUrl(movement.imageUrl)
+                        }
+                    }
+                }
+
+                // 底部留白
+                item {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Button(
+                        onClick = { showAddMovementDialog = true },
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, QingLianBlue)
+                    ) {
+                        Text("贡献新动作", color = QingLianBlue)
+                    }
                 }
             }
         }
@@ -251,12 +302,16 @@ fun FitnessScreen() {
             onConfirm = { dto ->
                 scope.launch {
                     try {
-                        RetrofitClient.apiService.addMovement(dto)
-                        Toast.makeText(context, "添加成功", Toast.LENGTH_SHORT).show()
-                        showAddMovementDialog = false
-                        performSearch(null)
+                        val res = RetrofitClient.apiService.addMovement(dto)
+                        if (res.isSuccess()) {
+                            Toast.makeText(context, "添加成功", Toast.LENGTH_SHORT).show()
+                            showAddMovementDialog = false
+                            performSearch(null)
+                        } else {
+                            Toast.makeText(context, "添加失败: ${res.message}", Toast.LENGTH_SHORT).show()
+                        }
                     } catch (e: Exception) {
-                        Toast.makeText(context, "添加失败", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "错误: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -281,12 +336,25 @@ fun FitnessScreen() {
             onConfirm = { duration, calories ->
                 scope.launch {
                     try {
-                        // 简单的记录逻辑，实际可能需要选择动作
-                        Toast.makeText(context, "打卡成功: $duration 分钟, $calories 千卡", Toast.LENGTH_SHORT).show()
-                        showLogWorkoutDialog = false
-                        refreshDashboard()
+                        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                        val nowStr = sdf.format(Date())
+                        val record = WorkoutRecordDTO(
+                            durationSeconds = duration * 60, // 分钟转秒
+                            caloriesBurned = calories,
+                            notes = "快速打卡",
+                            workoutDate = nowStr
+                        )
+                        val res = RetrofitClient.apiService.addWorkoutRecord(record)
+                        if (res.isSuccess()) {
+                            Toast.makeText(context, "打卡成功", Toast.LENGTH_SHORT).show()
+                            showLogWorkoutDialog = false
+                            refreshDashboard() // 刷新今日消耗
+                        } else {
+                            Toast.makeText(context, "打卡失败: ${res.message}", Toast.LENGTH_SHORT).show()
+                        }
                     } catch (e: Exception) {
                         e.printStackTrace()
+                        Toast.makeText(context, "错误: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -336,11 +404,12 @@ fun ToolItem(icon: ImageVector, label: String, color: Color, onClick: () -> Unit
     ) {
         Box(
             modifier = Modifier
-                .size(48.dp)
-                .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = color)
+            Icon(icon, contentDescription = label, tint = color)
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(label, fontSize = 12.sp, color = color)
@@ -387,7 +456,7 @@ fun PlanCard(plan: PlanVO) {
             LinearProgressIndicator(
                 progress = progress,
                 modifier = Modifier.fillMaxWidth(),
-                color = QingLianYellow,
+                color = QingLianBlue,
                 trackColor = Color(0xFFEEEEEE)
             )
         }
@@ -404,12 +473,12 @@ fun CategoryChip(category: CategoryCountVO, onClick: () -> Unit) {
         modifier = Modifier.height(40.dp)
     ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier.padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(category.category, fontSize = 14.sp)
             Spacer(modifier = Modifier.width(4.dp))
-            Text("(${category.count})", fontSize = 12.sp, color = Color.Gray)
+            Text("${category.count}", fontSize = 12.sp, color = Color.Gray)
         }
     }
 }
@@ -434,12 +503,25 @@ fun HardcoreCard(movement: MovementVO, onClick: () -> Unit) {
                     .background(Color.Black),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.PlayCircle, null, tint = Color.White, modifier = Modifier.size(32.dp))
+                if (!movement.imageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = resolveFitnessImageUrl(movement.imageUrl),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    Icon(Icons.Default.PlayCircle, contentDescription = null, tint = Color.White)
+                } else {
+                    Icon(Icons.Default.FitnessCenter, contentDescription = null, tint = Color.Gray)
+                }
             }
             Column(modifier = Modifier.padding(8.dp)) {
                 Text(movement.title, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("难度: ${movement.difficultyLevel}", fontSize = 12.sp, color = QingLianBlue)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.LocalFireDepartment, contentDescription = null, tint = Color.Red, modifier = Modifier.size(12.dp))
+                    Text("难度: ${movement.difficultyLevel}", fontSize = 12.sp, color = Color.Gray)
+                }
             }
         }
     }
@@ -462,10 +544,19 @@ fun MovementListItem(movement: MovementVO, onClick: () -> Unit) {
                 modifier = Modifier
                     .size(60.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color.Black),
+                    .background(Color(0xFFF0F0F0)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.PlayArrow, null, tint = Color.White)
+                if (!movement.imageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = resolveFitnessImageUrl(movement.imageUrl),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(Icons.Default.FitnessCenter, contentDescription = null, tint = Color.Gray)
+                }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -506,7 +597,7 @@ fun BMICalculatorDialog(onDismiss: () -> Unit) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
                 if (result != null) {
-                    Text("您的 BMI: $result", color = QingLianBlue, fontWeight = FontWeight.Bold)
+                    Text(result!!, color = QingLianBlue, fontWeight = FontWeight.Bold)
                 }
             }
         },
@@ -517,7 +608,7 @@ fun BMICalculatorDialog(onDismiss: () -> Unit) {
                     val w = weight.toDoubleOrNull()
                     if (h != null && w != null && h > 0) {
                         val bmi = w / ((h / 100) * (h / 100))
-                        result = String.format("%.1f", bmi)
+                        result = "BMI: %.1f".format(bmi)
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = QingLianYellow)
@@ -559,9 +650,9 @@ fun TimerDialog(onDismiss: () -> Unit) {
             Row {
                 Button(
                     onClick = { isRunning = !isRunning },
-                    colors = ButtonDefaults.buttonColors(containerColor = if (isRunning) Color.Red else QingLianYellow)
+                    colors = ButtonDefaults.buttonColors(containerColor = if (isRunning) Color.Red else QingLianBlue)
                 ) {
-                    Text(if (isRunning) "暂停" else "开始", color = Color.White)
+                    Text(if (isRunning) "暂停" else "开始")
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(
@@ -569,7 +660,7 @@ fun TimerDialog(onDismiss: () -> Unit) {
                         isRunning = false
                         timeSeconds = 0
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
                 ) {
                     Text("重置")
                 }
@@ -589,39 +680,28 @@ fun LeaderboardDialog(leaderboard: List<BurnRankVO>, onDismiss: () -> Unit) {
             Box(modifier = Modifier.heightIn(max = 400.dp)) {
                 if (leaderboard.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
-                        Text("暂无数据", color = Color.Gray)
+                        Text("暂无排行数据")
                     }
                 } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
+                    LazyColumn {
                         items(leaderboard) { item ->
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // 排名
                                 Text(
-                                    text = "#${leaderboard.indexOf(item) + 1}",
+                                    "${leaderboard.indexOf(item) + 1}",
                                     fontWeight = FontWeight.Bold,
-                                    color = QingLianYellow,
                                     modifier = Modifier.width(30.dp)
                                 )
-                                // 头像
-                                AsyncImage(
-                                    model = resolveFitnessImageUrl(item.avatarUrl),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.LightGray),
-                                    contentScale = ContentScale.Crop
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                // 名字和热量
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(item.nickname ?: "用户", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Text("${item.totalCalories} kcal", fontSize = 12.sp, color = Color.Gray)
+                                Column {
+                                    item.nickname?.let { Text(it, fontWeight = FontWeight.Bold) }
+                                    Text("${item.totalCalories} Kcal", fontSize = 12.sp, color = Color.Gray)
                                 }
                             }
-                            Divider(color = Color(0xFFF0F0F0), thickness = 1.dp, modifier = Modifier.padding(top = 8.dp))
+                            Divider(color = Color(0xFFEEEEEE))
                         }
                     }
                 }
@@ -639,19 +719,19 @@ fun QuickLogDialog(onDismiss: () -> Unit, onConfirm: (Int, Int) -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("快速打卡") },
+        title = { Text("快速记录") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = duration,
                     onValueChange = { duration = it },
-                    label = { Text("时长 (分钟)") },
+                    label = { Text("运动时长 (分钟)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
                 OutlinedTextField(
                     value = calories,
                     onValueChange = { calories = it },
-                    label = { Text("消耗 (千卡)") },
+                    label = { Text("消耗卡路里 (Kcal)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
             }
@@ -659,15 +739,15 @@ fun QuickLogDialog(onDismiss: () -> Unit, onConfirm: (Int, Int) -> Unit) {
         confirmButton = {
             Button(
                 onClick = {
-                    val d = duration.toIntOrNull() ?: 0
-                    val c = calories.toIntOrNull() ?: 0
-                    if (d > 0 && c > 0) {
+                    val d = duration.toIntOrNull()
+                    val c = calories.toIntOrNull()
+                    if (d != null && c != null) {
                         onConfirm(d, c)
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = QingLianYellow)
             ) {
-                Text("打卡", color = Color.Black)
+                Text("确认打卡", color = Color.Black)
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
@@ -685,32 +765,37 @@ fun AddMovementDialog(onDismiss: () -> Unit, onConfirm: (MovementDTO) -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("添加新动作") },
+        title = { Text("新增动作") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("动作名称") })
-                OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("分类") })
-                OutlinedTextField(
-                    value = difficultyStr,
-                    onValueChange = { difficultyStr = it },
-                    label = { Text("难度 (1-5)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
-                OutlinedTextField(value = videoUrl, onValueChange = { videoUrl = it }, label = { Text("视频链接 (MP4)") })
-                OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("描述") }, maxLines = 3)
+            LazyColumn {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("动作名称") })
+                        OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("分类 (如: 胸部, 腿部)") })
+                        OutlinedTextField(value = difficultyStr, onValueChange = { difficultyStr = it }, label = { Text("难度 (1-5)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                        OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("动作描述") }, maxLines = 3)
+                        OutlinedTextField(value = videoUrl, onValueChange = { videoUrl = it }, label = { Text("视频/图片URL (可选)") })
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    if (name.isNotBlank()) {
-                        val diff = difficultyStr.toIntOrNull() ?: 1
-                        onConfirm(MovementDTO(name, category, diff, description, videoUrl))
-                    }
+                    val difficulty = difficultyStr.toIntOrNull() ?: 1
+                    onConfirm(
+                        MovementDTO(
+                            name = name,
+                            category = category,
+                            difficulty = difficulty,
+                            description = description,
+                            imageUrl = videoUrl.ifBlank { null }
+                        )
+                    )
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = QingLianYellow)
             ) {
-                Text("添加", color = Color.Black)
+                Text("确认", color = Color.Black)
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },

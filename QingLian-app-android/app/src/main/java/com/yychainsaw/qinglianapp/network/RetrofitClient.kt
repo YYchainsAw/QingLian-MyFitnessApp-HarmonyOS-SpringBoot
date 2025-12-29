@@ -6,12 +6,11 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
-import kotlin.code
 
 object RetrofitClient {
-    private const val BASE_URL = "https://7ec4c34b.r7.cpolar.top/"
+    private const val BASE_URL = "https://42956d6f.r12.vip.cpolar.cn/"
 
-    // 全局保存 Token，在 MainActivity 启动或登录成功时赋值
+    // 这是一个备用变量，主要依赖 TokenManager
     var authToken: String? = null
 
     private val client: OkHttpClient by lazy {
@@ -25,10 +24,13 @@ object RetrofitClient {
                 val original = chain.request()
                 val requestBuilder = original.newBuilder()
 
-                // 如果有 Token，则添加到 Header
-                authToken?.let { token ->
-                    // 根据你的接口文档，Header 是 Authorization: <token>
-                    requestBuilder.header("Authorization", token)
+                // ============================================================
+                // 关键修改：优先调用 TokenManager.getToken()
+                // ============================================================
+                val token = TokenManager.getToken() ?: authToken
+
+                if (!token.isNullOrEmpty()) {
+                    requestBuilder.header("Authorization", "Bearer $token")
                 }
 
                 chain.proceed(requestBuilder.build())
@@ -37,11 +39,10 @@ object RetrofitClient {
                 val request = chain.request()
                 val response = chain.proceed(request)
 
-                // 如果后端返回 401 Unauthorized，说明 Token 过期或无效
                 if (response.code == 401) {
+                    authToken = null
                     TokenManager.notifyTokenExpired()
                 }
-
                 response
             }
             .connectTimeout(5, TimeUnit.MINUTES)

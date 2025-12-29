@@ -1,6 +1,10 @@
 package com.yychainsaw.qinglianapp.ui.message
 
+import android.content.Context
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,6 +13,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
@@ -31,7 +36,14 @@ import com.yychainsaw.qinglianapp.network.RetrofitClient
 import com.yychainsaw.qinglianapp.network.WebSocketManager
 import com.yychainsaw.qinglianapp.ui.community.resolveImageUrl
 import com.yychainsaw.qinglianapp.ui.theme.QingLianYellow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -45,7 +57,8 @@ data class UiMessage(
     val content: String,
     val sentAt: String,
     val senderAvatar: String? = null,
-    val senderName: String? = null
+    val senderName: String? = null,
+    val type: String = "TEXT"
 )
 
 sealed interface ChatUiItem {
@@ -98,6 +111,61 @@ fun ChatScreen(
             }
         }
     }
+    fun performSendMessage(content: String, msgType: String) {
+        scope.launch {
+            try {
+                val dto = MessageSendDTO(
+                    receiverId = if (isGroupChat) null else realChatId,
+                    groupId = if (isGroupChat) realChatId.toLong() else null,
+                    content = content,
+                    type = msgType
+                )
+                val res = RetrofitClient.apiService.sendMessage(dto)
+                if (res.isSuccess()) {
+                    val sentMsg = res.data!!
+                    if (rawMessages.none { it.id == sentMsg.id }) {
+                        val newUiMsg = UiMessage(
+                            id = sentMsg.id,
+                            senderId = sentMsg.senderId,
+                            content = sentMsg.content,
+                            sentAt = sentMsg.sentAt,
+                            senderAvatar = null,
+                            senderName = sentMsg.senderName,
+                            type = msgType // 记录类型
+                        )
+                        rawMessages = rawMessages + newUiMsg
+                        listState.scrollToItem(0)
+                    }
+                } else {
+                    Toast.makeText(context, "发送失败: ${res.message}", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(context, "发送错误", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // 2. 图片选择器 Launcher
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                // 显示 Loading 或 Toast 提示正在上传
+                Toast.makeText(context, "正在上传图片...", Toast.LENGTH_SHORT).show()
+                // 调用你已有的 uploadImageToOss 函数
+                val ossUrl = uploadImageToOss(context, uri)
+                if (ossUrl != null) {
+                    // 上传成功，发送图片消息
+                    performSendMessage(content = ossUrl, msgType = "IMAGE")
+                } else {
+                    Toast.makeText(context, "图片上传失败", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
 
     // 处理消息列表：添加时间分隔符并反转以适应 reverseLayout
     val displayMessages by remember(rawMessages) {
@@ -191,7 +259,8 @@ fun ChatScreen(
                     content = msgVO.content,
                     sentAt = msgVO.sentAt,
                     senderAvatar = null, // 此时为 null，UI 渲染时会动态查找
-                    senderName = msgVO.senderName
+                    senderName = msgVO.senderName,
+                    type = msgVO.type ?: "TEXT"
                 )
                 rawMessages = rawMessages + newMsg
 
@@ -254,6 +323,11 @@ fun ChatScreen(
                     modifier = Modifier.fillMaxWidth().background(Color.White).padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(onClick = {
+                        imagePickerLauncher.launch("image/*")
+                    }) {
+                        Icon(Icons.Default.AddCircle, contentDescription = "Image", tint = Color.Gray)
+                    }
                     OutlinedTextField(
                         value = inputText,
                         onValueChange = { inputText = it },
@@ -270,39 +344,7 @@ fun ChatScreen(
                             if (inputText.isNotBlank()) {
                                 val contentToSend = inputText
                                 inputText = "" // 立即清空输入框，提升体验
-                                scope.launch {
-                                    try {
-                                        val dto = MessageSendDTO(
-                                            receiverId = if (isGroupChat) null else realChatId,
-                                            groupId = if (isGroupChat) realChatId.toLong() else null,
-                                            content = contentToSend
-                                        )
-                                        val res = RetrofitClient.apiService.sendMessage(dto)
-                                        if (res.isSuccess()) {
-                                            val sentMsg = res.data!!
-                                            // 关键修复：检查是否已存在（防止 WebSocket 比 API 回调更快导致重复）
-                                            if (rawMessages.none { it.id == sentMsg.id }) {
-                                                val newUiMsg = UiMessage(
-                                                    id = sentMsg.id,
-                                                    senderId = sentMsg.senderId,
-                                                    content = sentMsg.content,
-                                                    sentAt = sentMsg.sentAt,
-                                                    senderAvatar = null,
-                                                    senderName = sentMsg.senderName
-                                                )
-                                                rawMessages = rawMessages + newUiMsg
-                                                listState.scrollToItem(0)
-                                            }
-                                        } else {
-                                            Toast.makeText(context, "发送失败: ${res.message}", Toast.LENGTH_SHORT).show()
-                                            inputText = contentToSend // 恢复文本
-                                        }
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
-                                        Toast.makeText(context, "发送错误", Toast.LENGTH_SHORT).show()
-                                        inputText = contentToSend // 恢复文本
-                                    }
-                                }
+                                performSendMessage(contentToSend, "TEXT")
                             }
                         }
                     ) {
@@ -384,13 +426,36 @@ fun MessageItemRow(msg: UiMessage, isMe: Boolean, avatarUrl: String?, showNickna
                     modifier = Modifier.padding(bottom = 2.dp, start = 4.dp)
                 )
             }
-
-            Surface(
-                color = if (isMe) QingLianYellow else Color.White,
-                shape = if (isMe) RoundedCornerShape(16.dp, 4.dp, 16.dp, 16.dp) else RoundedCornerShape(4.dp, 16.dp, 16.dp, 16.dp),
-                shadowElevation = 1.dp
-            ) {
-                Text(text = msg.content, modifier = Modifier.padding(12.dp), fontSize = 16.sp, color = Color.Black)
+            if (msg.type == "IMAGE") {
+                // 图片消息：无气泡背景，圆角图片
+                AsyncImage(
+                    model = resolveImageUrl(msg.content), // 确保你的 resolveImageUrl 能处理完整 URL
+                    contentDescription = "Image Message",
+                    modifier = Modifier
+                        .widthIn(max = 200.dp) // 限制最大宽度
+                        .heightIn(max = 300.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.LightGray),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Surface(
+                    color = if (isMe) QingLianYellow else Color.White,
+                    shape = if (isMe) RoundedCornerShape(
+                        16.dp,
+                        4.dp,
+                        16.dp,
+                        16.dp
+                    ) else RoundedCornerShape(4.dp, 16.dp, 16.dp, 16.dp),
+                    shadowElevation = 1.dp
+                ) {
+                    Text(
+                        text = msg.content,
+                        modifier = Modifier.padding(12.dp),
+                        fontSize = 16.sp,
+                        color = Color.Black
+                    )
+                }
             }
         }
 
@@ -420,13 +485,26 @@ suspend fun loadHistory(chatId: String, isGroup: Boolean, onResult: (List<UiMess
         if (response.isSuccess()) {
             val items = response.data?.items ?: emptyList()
             val uiMessages = items.map { item ->
+
+                // 【关键修复】双重判断逻辑
+                // 1. 如果后端明确返回了 IMAGE，就用 IMAGE
+                // 2. 如果后端返回 null 或 TEXT，但内容明显是图片 URL，强制修正为 IMAGE
+                val fixedType = if (item.type == "IMAGE") {
+                    "IMAGE"
+                } else if (isImageUrl(item.content)) {
+                    "IMAGE"
+                } else {
+                    "TEXT"
+                }
+
                 UiMessage(
-                    id = item.msgId, // 确保 MessageEntity 有 msgId 字段
+                    id = item.id,
                     senderId = item.senderId,
                     content = item.content,
                     sentAt = item.sentAt,
-                    senderAvatar = null, // 历史记录无头像，依赖 UI 层 groupMembers 解析
-                    senderName = null    // 历史记录无昵称，依赖 UI 层 groupMembers 解析
+                    senderAvatar = item.senderAvatar,
+                    senderName = item.senderName,
+                    type = fixedType // 使用修正后的类型
                 )
             }
             onResult(uiMessages)
@@ -452,4 +530,37 @@ fun formatChatTime(timeMillis: Long): String {
             SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(timeMillis))
         }
     }
+}
+
+suspend fun uploadImageToOss(context: Context, uri: Uri): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return@withContext null
+            val file = File(context.cacheDir, "upload_${System.currentTimeMillis()}.jpg")
+            val outputStream = FileOutputStream(file)
+            inputStream.copyTo(outputStream)
+            inputStream.close()
+            outputStream.close()
+
+            val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
+            val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
+
+            // 假设 ApiService 有 upload 接口，返回 String (URL)
+            // 如果你的接口返回结构不同，请在此处调整
+            val response = RetrofitClient.apiService.upload(body)
+            if (response.isSuccess()) response.data else null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+}
+
+fun isImageUrl(url: String?): Boolean {
+    if (url.isNullOrBlank()) return false
+    val lower = url.lowercase()
+    return lower.endsWith(".jpg") || lower.endsWith(".jpeg") ||
+            lower.endsWith(".png") || lower.endsWith(".gif") ||
+            lower.endsWith(".webp") ||
+            lower.contains("oss-cn-") // 针对你的阿里云 OSS 链接特征
 }

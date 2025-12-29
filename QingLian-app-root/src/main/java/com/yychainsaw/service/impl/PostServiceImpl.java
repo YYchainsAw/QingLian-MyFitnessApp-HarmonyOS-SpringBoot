@@ -97,22 +97,25 @@ public class PostServiceImpl implements PostService {
 
         PageHelper.startPage(pageNum, pageSize);
 
-        List<PostVO> postVOs = postMapper.selectPostFeed();
+        try {
+            List<PostVO> postVOs = postMapper.selectPostFeed();
 
-        com.github.pagehelper.Page<PostVO> p = (Page<PostVO>) postVOs;
+            Page<PostVO> p = (Page<PostVO>) postVOs;
 
-        PageBean<PostVO> pageBean = new PageBean<>();
-        pageBean.setTotal(p.getTotal());
-        pageBean.setItems(postVOs);
+            PageBean<PostVO> pageBean = new PageBean<>();
+            pageBean.setTotal(p.getTotal());
+            pageBean.setItems(postVOs);
 
-        if (pageNum == 1) {
-            try {
-                redisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(pageBean), 60, TimeUnit.SECONDS);
-            } catch (Exception e) {}
+            if (pageNum == 1) {
+                try {
+                    redisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(pageBean), 60, TimeUnit.SECONDS);
+                } catch (Exception ignored) {}
+            }
+
+            return pageBean;
+        } finally {
+            PageHelper.clearPage();
         }
-
-
-        return pageBean;
     }
 
     @Override

@@ -94,7 +94,7 @@ fun AddFriendScreen(navController: NavController) {
                     try {
                         android.util.Log.d("AddFriendDebug", "尝试发送打招呼消息...")
                         val helloContent = "你好，我想添加你为好友"
-                        val msgDto = MessageSendDTO(receiverId = user.userId, content = helloContent)
+                        val msgDto = MessageSendDTO(receiverId = user.userId, content = helloContent, type = "TEXT")
                         val msgRes = RetrofitClient.apiService.sendMessage(msgDto)
                         android.util.Log.d("AddFriendDebug", "打招呼消息结果: ${msgRes.code}")
                     } catch (e: Exception) {
