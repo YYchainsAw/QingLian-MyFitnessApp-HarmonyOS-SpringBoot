@@ -44,6 +44,11 @@ public class FriendshipServiceImpl implements FriendshipService {
     @Override
     public void sendRequest(UUID friendId) {
         UUID userId = ThreadLocalUtil.getCurrentUserId();
+
+        if (userId.equals(friendId)) {
+            throw new IllegalArgumentException("不能添加自己为好友");
+        }
+
         Friendship friendship = new Friendship();
         friendship.setUserId(userId);
         friendship.setFriendId(friendId);
