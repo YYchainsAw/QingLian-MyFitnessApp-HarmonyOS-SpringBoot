@@ -8,7 +8,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    private const val BASE_URL = "https://42956d6f.r12.vip.cpolar.cn/"
+    private const val BASE_URL = "https://331d415d.r7.cpolar.top/"
 
     // 这是一个备用变量，主要依赖 TokenManager
     var authToken: String? = null

@@ -1,6 +1,7 @@
 package com.yychainsaw.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -43,6 +44,8 @@ public class PostServiceImpl implements PostService {
     private StringRedisTemplate redisTemplate;
     @Autowired
     private ObjectMapper objectMapper;
+
+    private static final String LIKES_BUFFER_KEY = "post:likes:buffer:";
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -120,13 +123,9 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public void likePost(Long postId) {
-        // 简单实现：直接 SQL 更新，并发高时可能不准，但符合原 SQL 逻辑
-        // UPDATE posts SET likes_count = likes_count + 1 WHERE post_id = ?
-        Post post = postMapper.selectById(postId);
-        if (post != null) {
-            post.setLikesCount(post.getLikesCount() + 1);
-            postMapper.updateById(post);
-        }
+
+        redisTemplate.opsForHash().increment(LIKES_BUFFER_KEY, String.valueOf(postId), 1);
+
     }
 
     @Override
