@@ -1,5 +1,6 @@
 package com.yychainsaw.qinglianapp.network
 
+import com.yychainsaw.qinglianapp.utils.AppConfig
 import com.yychainsaw.qinglianapp.utils.TokenManager
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -8,7 +9,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    private const val BASE_URL = "https://331d415d.r7.cpolar.top/"
+    private const val BASE_URL = AppConfig.BASE_URL
 
     // 这是一个备用变量，主要依赖 TokenManager
     var authToken: String? = null

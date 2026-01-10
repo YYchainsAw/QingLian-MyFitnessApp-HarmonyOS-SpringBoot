@@ -1,5 +1,7 @@
 package com.yychainsaw.qinglianapp.ui.community
 
+import android.Manifest // Import Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -15,7 +17,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +32,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.yychainsaw.qinglianapp.data.model.dto.PostCreateDTO
@@ -37,7 +43,10 @@ import com.yychainsaw.qinglianapp.utils.UriUtils
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
-import okhttp3.MultipartBody
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,56 +56,150 @@ fun PostCreateScreen(navController: NavController) {
     var imageUrls by remember { mutableStateOf<List<String>>(emptyList()) }
     var isUploading by remember { mutableStateOf(false) } // 图片上传中
     var isPosting by remember { mutableStateOf(false) }   // 帖子发布中
+    var showDialog by remember { mutableStateOf(false) } // 控制选择弹窗
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // ---- 相机相关 ----
+    var photoUri by remember { mutableStateOf<Uri?>(null) } // 拍照保存的URI
+
+    // 创建临时文件并返回 URI
+    fun createImageUri(): Uri? {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val imageFileName = "JPEG_" + timeStamp + "_"
+        // 使用 cacheDir 或 externalCacheDir
+        val storageDir = File(context.cacheDir, "my_images")
+        if (!storageDir.exists()) storageDir.mkdirs()
+
+        val image = File.createTempFile(imageFileName, ".jpg", storageDir)
+
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            image
+        )
+    }
+
+    // 上传逻辑封装
+    fun uploadUris(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+
+        // 检查是否超过总数限制
+        if (imageUrls.size + uris.size > 9) {
+            Toast.makeText(context, "最多只能上传9张图片", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        isUploading = true
+        scope.launch {
+            val uploadJobs = uris.map { uri ->
+                async {
+                    try {
+                        val part = UriUtils.prepareFilePart(context, uri, "file")
+                        if (part != null) {
+                            val response = RetrofitClient.apiService.upload(part)
+                            if (response.isSuccess() && response.data != null) {
+                                response.data // 返回 URL string
+                            } else {
+                                null
+                            }
+                        } else {
+                            null
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        null
+                    }
+                }
+            }
+            // 拿到所有结果，过滤 null
+            val results = uploadJobs.awaitAll().filterNotNull()
+            if (results.isNotEmpty()) {
+                imageUrls = imageUrls + results
+            }
+
+            isUploading = false
+            Toast.makeText(context, "上传处理完成", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // 相机启动器
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && photoUri != null) {
+            uploadUris(listOf(photoUri!!))
+        }
+    }
+
+    // 权限请求启动器 (相机)
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            val uri = createImageUri()
+            if (uri != null) {
+                photoUri = uri
+                cameraLauncher.launch(uri)
+            }
+        } else {
+            Toast.makeText(context, "需要相机权限才能拍照", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // 图片选择器 (多选，最多9张)
     val pickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(9)
     ) { uris ->
-        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        uploadUris(uris)
+    }
 
-        // 检查是否超过总数限制
-        if (imageUrls.size + uris.size > 9) {
-            Toast.makeText(context, "最多只能上传9张图片", Toast.LENGTH_SHORT).show()
-            return@rememberLauncherForActivityResult
-        }
-
-        isUploading = true
-        scope.launch {
-            // 使用 map + async 实现并发上传
-            // async 会立即启动协程，不会阻塞后续代码，从而实现多张图同时上传
-            val uploadJobs = uris.map { uri ->
-                async {
-                    try {
-                        // 1. 准备单个文件 Part
-                        // 注意：单文件上传接口通常参数名为 "file"，不同于批量接口的 "files"
-                        val part = UriUtils.prepareFilePart(context, uri, "file")
-
-                        if (part != null) {
-                            // 2. 调用单文件上传接口
-                            val response = RetrofitClient.apiService.upload(part)
-
-                            if (response.isSuccess() && response.data != null) {
-                                // 3. 成功一张，立即更新 UI (追加到列表)
-                                // 注意：在 Compose 中更新 List 需要创建新实例
-                                imageUrls = imageUrls + response.data
-                            } else {
-                                // 可选：处理单张失败的情况
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("选择图片来源") },
+            text = {
+                Column {
+                    ListItem(
+                        headlineContent = { Text("拍照") },
+                        leadingContent = { Icon(Icons.Default.CameraAlt, null) },
+                        modifier = Modifier
+                            .clickable {
+                                showDialog = false
+                                // 检查权限
+                                val permission = Manifest.permission.CAMERA
+                                if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+                                    val uri = createImageUri()
+                                    if (uri != null) {
+                                        photoUri = uri
+                                        cameraLauncher.launch(uri)
+                                    }
+                                } else {
+                                    permissionLauncher.launch(permission)
+                                }
                             }
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+                    )
+                    ListItem(
+                        headlineContent = { Text("从相册选择") },
+                        leadingContent = { Icon(Icons.Default.Photo, null) },
+                        modifier = Modifier
+                            .clickable {
+                                showDialog = false
+                                pickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            }
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("取消")
                 }
             }
-
-            // 等待所有上传任务结束（无论成功失败），才关闭加载状态
-            uploadJobs.awaitAll()
-            isUploading = false
-            Toast.makeText(context, "上传处理完成", Toast.LENGTH_SHORT).show()
-        }
+        )
     }
 
     Scaffold(
@@ -223,13 +326,8 @@ fun PostCreateScreen(navController: NavController) {
                                 .aspectRatio(1f)
                                 .background(Color(0xFFF5F7FA), RoundedCornerShape(8.dp))
                                 .clickable(enabled = !isUploading) {
-                                    // 计算剩余可选择数量
-                                    val remaining = 9 - imageUrls.size
-                                    // 启动多选器 (注意：PickMultipleVisualMedia 的 maxItems 参数是 API 33+ 的建议值，
-                                    // 实际限制我们在回调里做了，这里直接启动即可)
-                                    pickerLauncher.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                    )
+                                    // 点击添加按钮，弹出选择对话框
+                                    showDialog = true
                                 },
                             contentAlignment = Alignment.Center
                         ) {

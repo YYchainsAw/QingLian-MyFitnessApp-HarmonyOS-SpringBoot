@@ -40,8 +40,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // 关键初始化
+        TokenManager.init(this)
+
         // ================== App 启动时恢复 Token ==================
-        val savedToken = TokenManager.getToken(this)
+        val savedToken = TokenManager.getToken()
         if (!savedToken.isNullOrEmpty()) {
             RetrofitClient.authToken = savedToken
             Log.d("MainActivity", "Token 已从本地存储恢复，RetrofitClient 已就绪")
@@ -79,7 +82,7 @@ class MainActivity : ComponentActivity() {
                         Log.d("MainActivity", "收到 Token 过期事件，执行强制退出")
 
                         // 1. 清除本地 Token 和内存中的 Token
-                        TokenManager.clearToken(context)
+                        TokenManager.clearToken()
                         RetrofitClient.authToken = null
 
                         // 2. 停止 WebSocket 服务
@@ -95,7 +98,7 @@ class MainActivity : ComponentActivity() {
                 // ===============================================================
 
                 // 判断初始页面
-                val startDestination = if (TokenManager.getToken(this).isNullOrEmpty()) "login" else "main"
+                val startDestination = if (TokenManager.getToken().isNullOrEmpty()) "login" else "main"
 
                 NavHost(navController = navController, startDestination = startDestination) {
                     composable("login") { LoginScreen(navController) }

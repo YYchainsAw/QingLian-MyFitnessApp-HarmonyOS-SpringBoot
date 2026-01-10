@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.util.Log
 import com.google.gson.Gson
 import com.yychainsaw.qinglianapp.data.model.vo.MessageVO
+import com.yychainsaw.qinglianapp.utils.AppConfig
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.disposables.Disposable
@@ -19,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 object WebSocketManager {
     // 保持你的 URL 和 topic 路径不变 (根据日志，你的路径是用 . 分隔的)
-    private const val WS_URL = "wss://331d415d.r7.cpolar.top/ws/websocket"
+    private const val WS_URL = AppConfig.WS_URL
     private const val SUBSCRIBE_DESTINATION = "/user/queue/messages"
 
     private var stompClient: StompClient? = null

@@ -93,7 +93,7 @@ fun LoginScreen(navController: NavController) {
 
                             if (response.isSuccess() && response.data != null) {
                                 val token = response.data.token
-                                TokenManager.saveToken(context, token)
+                                TokenManager.saveToken(token) // 修复：不需要 context 参数
                                 RetrofitClient.authToken = token
                                 Toast.makeText(context, "登录成功", Toast.LENGTH_SHORT).show()
 
