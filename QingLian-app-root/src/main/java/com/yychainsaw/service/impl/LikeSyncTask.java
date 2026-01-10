@@ -6,6 +6,8 @@ import com.yychainsaw.pojo.entity.Post;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -26,40 +28,45 @@ public class LikeSyncTask {
 
     @Scheduled(fixedRate = 5000)
     public void syncLikesToDb() {
-
-        if (Boolean.FALSE.equals(redisTemplate.hasKey(LIKES_BUFFER_KEY))) {
-            return;
+        // 1. 优先处理遗留的 syncing 数据（防止 crash 后 rename 导致数据覆盖丢失）
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(LIKES_SYNCING_KEY))) {
+            processSyncingData();
         }
 
-        try {
-            redisTemplate.rename(LIKES_BUFFER_KEY, LIKES_SYNCING_KEY);
-        } catch (Exception e) {
-            return;
-        }
-
-        Map<Object, Object> map = redisTemplate.opsForHash().entries(LIKES_SYNCING_KEY);
-
-        if (map.isEmpty()) {
-            return;
-        }
-
-        log.info("开始同步点赞数据，涉及帖子数量: {}", map.size());
-
-        for (Map.Entry<Object, Object> entry : map.entrySet()) {
+        // 2. 将 buffer 重命名为 syncing 并处理
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(LIKES_BUFFER_KEY))) {
             try {
-                Long postId = Long.valueOf(entry.getKey().toString());
-                Integer delta = Integer.valueOf(entry.getValue().toString());
-
-                UpdateWrapper<Post> updateWrapper = new UpdateWrapper<>();
-                updateWrapper.eq("post_id", postId)
-                             .setSql("likes_count = likes_count + " + delta);
-                
-                postMapper.update(null, updateWrapper);
+                redisTemplate.rename(LIKES_BUFFER_KEY, LIKES_SYNCING_KEY);
+                processSyncingData();
             } catch (Exception e) {
-                log.error("同步帖子 {} 点赞数失败", entry.getKey(), e);
+                log.warn("Rename buffer key failed (maybe concurrent execution)", e);
             }
         }
+    }
 
-        redisTemplate.delete(LIKES_SYNCING_KEY);
+    private void processSyncingData() {
+        // 使用 scan 替代 entries，避免一次性加载大量数据导致 OOM
+        try (Cursor<Map.Entry<Object, Object>> cursor = redisTemplate.opsForHash().scan(LIKES_SYNCING_KEY, ScanOptions.NONE)) {
+            while (cursor.hasNext()) {
+                Map.Entry<Object, Object> entry = cursor.next();
+                try {
+                    Long postId = Long.valueOf(entry.getKey().toString());
+                    int delta = Integer.parseInt(entry.getValue().toString());
+
+                    if (delta == 0) continue;
+
+                    UpdateWrapper<Post> updateWrapper = new UpdateWrapper<>();
+                    updateWrapper.eq("post_id", postId)
+                            .setSql("likes_count = likes_count + " + delta);
+
+                    postMapper.update(null, updateWrapper);
+                } catch (Exception e) {
+                    log.error("同步帖子 {} 点赞数失败", entry.getKey(), e);
+                }
+            }
+            redisTemplate.delete(LIKES_SYNCING_KEY);
+        } catch (Exception e) {
+            log.error("处理点赞同步数据异常", e);
+        }
     }
 }
