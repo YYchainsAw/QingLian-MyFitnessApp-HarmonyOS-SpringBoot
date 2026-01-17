@@ -94,6 +94,26 @@ fun ChatScreen(
     var currentUserId by remember { mutableStateOf("") }
     var currentUserAvatar by remember { mutableStateOf<String?>(null) }
     var isFriend by remember { mutableStateOf(isGroupChat) }
+    var hasIncomingRequest by remember { mutableStateOf(false) }
+
+    // 定义接受好友请求的函数
+    fun acceptFriend() {
+        scope.launch {
+            try {
+                val response = RetrofitClient.apiService.acceptFriendRequest(realChatId)
+                if (response.isSuccess()) {
+                    Toast.makeText(context, "已添加好友", Toast.LENGTH_SHORT).show()
+                    isFriend = true
+                    hasIncomingRequest = false
+                } else {
+                    Toast.makeText(context, "操作失败: ${response.message}", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(context, "网络错误", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     // 定义添加好友的函数
     fun addFriend() {
@@ -229,6 +249,19 @@ fun ChatScreen(
                     val friendList = friendsRes.data ?: emptyList()
                     isFriend = friendList.any { it.userId == realChatId }
                 }
+
+                // 如果不是好友，检查是否有待处理的好友请求
+                if (!isFriend) {
+                    try {
+                        val pendingRes = RetrofitClient.apiService.getPendingFriendRequests()
+                        if (pendingRes.isSuccess()) {
+                            val list = pendingRes.data ?: emptyList()
+                            hasIncomingRequest = list.any { it.userId == realChatId }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -258,7 +291,7 @@ fun ChatScreen(
                     senderId = msgVO.senderId,
                     content = msgVO.content,
                     sentAt = msgVO.sentAt,
-                    senderAvatar = null, // 此时为 null，UI 渲染时会动态查找
+                    senderAvatar = msgVO.senderAvatar,
                     senderName = msgVO.senderName,
                     type = msgVO.type ?: "TEXT"
                 )
@@ -311,6 +344,26 @@ fun ChatScreen(
                                 colors = ButtonDefaults.buttonColors(containerColor = QingLianYellow)
                             ) {
                                 Text("添加好友", color = Color.Black)
+                            }
+                        }
+                    }
+                } else if (hasIncomingRequest) {
+                    Surface(
+                        color = Color(0xFFE8F5E9),
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("你有新的好友请求", color = Color(0xFF2E7D32))
+                            Button(
+                                onClick = { acceptFriend() },
+                                colors = ButtonDefaults.buttonColors(containerColor = QingLianYellow)
+                            ) {
+                                Text("接受请求", color = Color.Black)
                             }
                         }
                     }
@@ -383,8 +436,8 @@ fun ChatScreen(
                         // ============================================================
                         val specificAvatar = when {
                             isMe -> currentUserAvatar // 如果是我，用我的头像
-                            isGroupChat -> groupMembers[msg.senderId]?.avatarUrl // 群聊：查表
-                            else -> friendAvatar // 私聊：用传进来的好友头像
+                            isGroupChat -> groupMembers[msg.senderId]?.avatarUrl ?: msg.senderAvatar // 群聊：查表失败则用消息自带
+                            else -> friendAvatar ?: msg.senderAvatar // 私聊：用传进来的好友头像或消息自带
                         }
 
                         val specificName = when {
