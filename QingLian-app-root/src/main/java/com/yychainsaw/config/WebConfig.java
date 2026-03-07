@@ -22,7 +22,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "/user/search",
                         "/movements/search",
                         "/movements/analytics",
-                        "/movements/hardcore"
+                        "/movements/hardcore",
+                        "/test/**"
                 );
     }
 }

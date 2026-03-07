@@ -97,15 +97,16 @@ CREATE INDEX idx_posts_created_at ON posts(created_at DESC); -- 优化: 首页Fe
 CREATE TRIGGER update_posts_modtime BEFORE UPDATE ON posts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ==========================================
--- Friendships 表 (复合主键)
+-- Friendships 表 (复合主键改为了代理主键 id，以配合 MyBatis-Plus)
 -- ==========================================
 CREATE TABLE friendships (
+    id         BIGSERIAL PRIMARY KEY,
     user_id    UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     friend_id  UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     status     VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACCEPTED', 'BLOCKED')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, friend_id)
+    UNIQUE (user_id, friend_id) -- 保持业务上的唯一性约束
 );
 
 CREATE INDEX idx_friendships_friend_id ON friendships(friend_id); -- 优化: 查询"谁关注了我"
@@ -125,3 +126,44 @@ CREATE TABLE messages (
 
 CREATE INDEX idx_messages_sender_receiver ON messages(sender_id, receiver_id); -- 优化: 聊天记录查询
 CREATE INDEX idx_messages_unread ON messages(receiver_id) WHERE is_read = FALSE; -- 优化: 快速统计未读消息
+
+-- ==========================================
+-- Chat Groups 表 (群聊)
+-- ==========================================
+CREATE TABLE chat_groups (
+    group_id    BIGSERIAL PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL,
+    owner_id    UUID REFERENCES users(user_id) ON DELETE SET NULL,
+    avatar_url  VARCHAR(255),
+    notice      TEXT,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER update_chat_groups_modtime BEFORE UPDATE ON chat_groups FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ==========================================
+-- Group Members 表 (群成员)
+-- ==========================================
+CREATE TABLE group_members (
+    id          BIGSERIAL PRIMARY KEY,
+    group_id    BIGINT REFERENCES chat_groups(group_id) ON DELETE CASCADE,
+    user_id     UUID REFERENCES users(user_id) ON DELETE CASCADE,
+    role        VARCHAR(20) DEFAULT 'MEMBER' CHECK (role IN ('OWNER', 'ADMIN', 'MEMBER')),
+    joined_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (group_id, user_id)
+);
+
+CREATE INDEX idx_group_members_user_id ON group_members(user_id);
+
+-- ==========================================
+-- Group Read Status 表 (群消息已读状态)
+-- ==========================================
+CREATE TABLE group_read_status (
+    id              BIGSERIAL PRIMARY KEY,
+    group_id        BIGINT REFERENCES chat_groups(group_id) ON DELETE CASCADE,
+    user_id         UUID REFERENCES users(user_id) ON DELETE CASCADE,
+    last_read_msg_id BIGINT,
+    UNIQUE (group_id, user_id)
+);
+
