@@ -9,7 +9,7 @@
     </parent>
 
   <groupId>com.yychainsaw</groupId>
-  <artifactId>QingLian-app-root</artifactId>
+  <artifactId>qinglian-app-root</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 

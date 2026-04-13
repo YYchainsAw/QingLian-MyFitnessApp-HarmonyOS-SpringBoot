@@ -1,0 +1,37 @@
+server:
+  port: 8080
+  tomcat:
+    connection-timeout: 300000 # 连接超时设置为 5分钟 (单位毫秒，默认通常是 60s)
+    max-swallow-size: -1       # 允许 Tomcat 吞吐任意大小的请求体 (防止上传失败时连接重置)
+
+
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/Myfitness_App}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:1234}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  # 新增文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 50MB      # 单个文件最大大小
+      max-request-size: 100MB   # 整个请求最大大小
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  mapper-locations: classpath:mapper/*.xml
+  global-config:
+    db-config:
+      id-type: assign_uuid
+
+aliyun:
+  oss:
+    endpoint: https://oss-cn-hangzhou.aliyuncs.com
+    accessKeyId: ${ALIYUN_OSS_ACCESS_KEY_ID:your_access_key}
+    accessKeySecret: ${ALIYUN_OSS_ACCESS_KEY_SECRET:your_access_secret}
