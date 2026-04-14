@@ -23,7 +23,14 @@ public class WebConfig implements WebMvcConfigurer {
                         "/movements/search",
                         "/movements/analytics",
                         "/movements/hardcore",
-                        "/test/**"
+                        "/test/**",
+                        // Swagger & Knife4j UI
+                        "/doc.html",
+                        "/webjars/**",
+                        "/swagger-resources/**",
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html"
                 );
     }
 }

@@ -1,47 +1,25 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+import { RouterView } from 'vue-router'
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
-  </header>
-
-  <main>
-    <TheWelcome />
-  </main>
+  <RouterView />
 </template>
 
-<style scoped>
-header {
-  line-height: 1.5;
+<style>
+/* 自定义全局样式如动画可在这里保留 */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
+.hero-gradient {
+  background: linear-gradient(180deg, rgba(25, 28, 29, 0.4) 0%, rgba(25, 28, 29, 0) 40%, rgba(25, 28, 29, 0.8) 100%);
+}
+.text-glow {
+  text-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
 }
 </style>

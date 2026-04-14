@@ -1,14 +1,19 @@
 package com.yychainsaw.pojo.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 //统一响应结果
 @NoArgsConstructor
 @Data
+@Schema(description = "Result模型")
 public class Result<T> {
+    @Schema(description = "code")
     private Integer code;//业务状态码  0-成功  1-失败
     private String message;//提示信息
+    @Schema(description = "data")
     private T data;//响应数据
 
     private Result(Integer code, String message, T data) {

@@ -1,5 +1,9 @@
 package com.yychainsaw.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.yychainsaw.pojo.dto.MessageSendDTO;
@@ -18,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Tag(name = "Message管理", description = "Message相关的API接口")
 @RestController
 @RequestMapping("/messages")
 public class MessageController {
@@ -28,6 +33,7 @@ public class MessageController {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
+    @Operation(summary = "sendMessage", description = "sendMessage 接口")
     @PostMapping
     public Result sendMessage(@RequestBody @Validated MessageSendDTO dto) {
 
@@ -56,24 +62,28 @@ public class MessageController {
     }
 
     // 标记群消息已读 (前端进入群聊页面时调用)
+    @Operation(summary = "markGroupAsRead", description = "markGroupAsRead 接口")
     @PutMapping("/group/read")
     public Result markGroupAsRead(@RequestParam Long groupId, @RequestParam Long lastMsgId) {
         messageService.markGroupAsRead(groupId, lastMsgId);
         return Result.success();
     }
 
+    @Operation(summary = "markAsRead", description = "markAsRead 接口")
     @PutMapping("/read/{senderId}")
     public Result markAsRead(@PathVariable String senderId) {
         messageService.markAsRead(UUID.fromString(senderId));
         return Result.success();
     }
 
+    @Operation(summary = "getUnreadCount", description = "getUnreadCount 接口")
     @GetMapping("/unread/count")
     public Result<Long> getUnreadCount() {
         Long count = messageService.getUnreadCount();
         return Result.success(count);
     }
 
+    @Operation(summary = "getChatHistory", description = "getChatHistory 接口")
     @GetMapping("/history/{friendId}")
     public Result<PageBean<MessageVO>> getChatHistory(
             @PathVariable String friendId,
@@ -93,6 +103,7 @@ public class MessageController {
         return Result.success(pageBean);
     }
 
+    @Operation(summary = "getGroupChatHistory", description = "getGroupChatHistory 接口")
     @GetMapping("/groups/{groupId}/history")
     public Result<PageBean<MessageVO>> getGroupChatHistory(
             @PathVariable Long groupId,

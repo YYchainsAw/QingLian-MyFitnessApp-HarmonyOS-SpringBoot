@@ -1,5 +1,9 @@
 package com.yychainsaw.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.yychainsaw.pojo.dto.MovementDTO;
 import com.yychainsaw.pojo.dto.MovementDifficultyDTO;
 import com.yychainsaw.pojo.dto.PageBean;
@@ -15,18 +19,21 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "Movement管理", description = "Movement相关的API接口")
 @RestController
 @RequestMapping("/movements")
 public class MovementController {
     @Autowired
     private movementService movementService;
 
+    @Operation(summary = "addMovement", description = "addMovement 接口")
     @PostMapping("/add")
     public Result addMovement(@RequestBody @Validated MovementDTO movementDTO) {
         movementService.addMovement(movementDTO);
         return Result.success();
     }
 
+    @Operation(summary = "searchMovements", description = "searchMovements 接口")
     @GetMapping("/search")
     public Result<PageBean<MovementVO>> searchMovements(@RequestParam(required = false) String keyword,
                                                         Integer pageNum,
@@ -36,29 +43,34 @@ public class MovementController {
         return Result.success(movements);
     }
 
+    @Operation(summary = "changeDifficultyLevel", description = "changeDifficultyLevel 接口")
     @PostMapping("/change-difficulty")
     public Result changeDifficultyLevel(@RequestBody @Validated MovementDifficultyDTO movementDTO){
         movementService.changeDifficultyLevel(movementDTO);
         return Result.success();
     }
 
+    @Operation(summary = "deleteMovement", description = "deleteMovement 接口")
     @DeleteMapping("/deleteUnused")
     public  Result deleteMovement(){
         movementService.deleteUnusedMovement();
         return Result.success();
     }
 
+    @Operation(summary = "接口", description = "接口 接口")
     @GetMapping("/countCategories")
     public Result<List<Map<String, Object>>> countCategories() {
         List<Map<String, Object>> movements = movementService.countCategories();
         return Result.success(movements);
     }
 
+    @Operation(summary = "getHardcoreMovements", description = "getHardcoreMovements 接口")
     @GetMapping("/hardcore")
     public Result<List<MovementVO>> getHardcoreMovements() {
         return Result.success(movementService.getHardcoreMovements());
     }
 
+    @Operation(summary = "getMovementAnalytics", description = "getMovementAnalytics 接口")
     @GetMapping("/analytics")
     public Result<List<MovementAnalyticsVO>> getMovementAnalytics() {
         return Result.success(movementService.getMovementAnalytics());

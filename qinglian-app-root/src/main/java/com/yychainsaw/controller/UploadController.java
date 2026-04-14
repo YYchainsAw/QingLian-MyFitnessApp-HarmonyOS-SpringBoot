@@ -1,5 +1,9 @@
 package com.yychainsaw.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.yychainsaw.pojo.dto.Result;
 import com.yychainsaw.utils.AliOssUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -13,12 +17,14 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
+@Tag(name = "Upload管理", description = "Upload相关的API接口")
 @RestController
 public class UploadController {
 
     // 允许上传的文件类型白名单
     private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList(".jpg", ".jpeg", ".png", ".gif", ".webp");
 
+    @Operation(summary = "upload", description = "upload 接口")
     @PostMapping("/upload")
     public Result<String> upload(MultipartFile file) {
         try {
@@ -32,6 +38,7 @@ public class UploadController {
         }
     }
 
+    @Operation(summary = "uploadBatch", description = "uploadBatch 接口")
     @PostMapping("/upload/batch")
     public Result<List<String>> uploadBatch(MultipartFile[] files) {
         if (files == null || files.length == 0) {
