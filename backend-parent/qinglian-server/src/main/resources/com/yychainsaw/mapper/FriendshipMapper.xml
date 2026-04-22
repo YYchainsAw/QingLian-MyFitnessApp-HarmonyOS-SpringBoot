@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yychainsaw.mapper.FriendshipMapper">
+
+    <select id="selectFriendsActivePlans" resultType="com.yychainsaw.vo.FriendPlanVO">
+        SELECT u.username, p.title, p.status, p.end_date
+        FROM users u
+        JOIN friendships f ON u.user_id = f.friend_id
+        JOIN plans p ON u.user_id = p.user_id
+        WHERE f.user_id = #{userId} AND f.status = 'ACCEPTED' AND p.status = 'ACTIVE'
+    </select>
+
+    <select id="selectFriendRankings" resultType="com.yychainsaw.vo.FriendRankingVO">
+        SELECT u.username, COUNT(wr.record_id) AS total_workouts, MAX(wr.workout_date) AS last_workout
+        FROM users u
+        JOIN friendships f ON u.user_id = f.friend_id
+        JOIN workout_records wr ON u.user_id = wr.user_id
+        WHERE f.user_id = #{userId} AND f.status = 'ACCEPTED'
+        GROUP BY u.user_id, u.username
+        ORDER BY total_workouts DESC LIMIT 5
+    </select>
+
+    <!-- 修改 resultType 为新的 VO -->
+    <select id="selectFriendList" resultType="com.yychainsaw.vo.FriendListVO">
+        SELECT
+            u.user_id,
+            u.username,
+            u.nickname,
+            u.avatar_url,
+            -- 子查询 1: 获取最后一条消息内容 (双向：我发给他的 OR 他发给我的)
+            (
+                SELECT content
+                FROM messages m
+                WHERE (m.sender_id = u.user_id AND m.receiver_id = #{userId})
+                   OR (m.sender_id = #{userId} AND m.receiver_id = u.user_id)
+                ORDER BY m.sent_at DESC
+                LIMIT 1
+            ) AS last_message,
+            -- 子查询 2: 获取最后一条消息时间
+            (
+                SELECT sent_at
+                FROM messages m
+                WHERE (m.sender_id = u.user_id AND m.receiver_id = #{userId})
+                   OR (m.sender_id = #{userId} AND m.receiver_id = u.user_id)
+                ORDER BY m.sent_at DESC
+                LIMIT 1
+            ) AS last_message_time,
+            -- 子查询 3: 统计未读数 (仅统计他发给我的未读消息)
+            (
+                SELECT COUNT(*)
+                FROM messages m
+                WHERE m.sender_id = u.user_id
+                  AND m.receiver_id = #{userId}
+                  AND m.is_read = false
+            ) AS unread_count
+        FROM users u
+                 JOIN friendships f ON (f.friend_id = u.user_id OR f.user_id = u.user_id)
+        WHERE (f.user_id = #{userId} OR f.friend_id = #{userId})
+          AND f.status = 'ACCEPTED'
+          AND u.user_id != #{userId}
+    </select>
+
+
+</mapper>

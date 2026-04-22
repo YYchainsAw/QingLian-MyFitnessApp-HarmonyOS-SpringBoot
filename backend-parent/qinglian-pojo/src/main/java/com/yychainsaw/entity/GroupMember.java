@@ -1,0 +1,29 @@
+package com.yychainsaw.entity;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Data;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Data
+@TableName("group_members")
+@Schema(description = "GroupMember模型")
+public class GroupMember {
+    @TableId(value = "id", type = IdType.AUTO)
+    @Schema(description = "id")
+    private Long id;
+
+    @Schema(description = "groupId")
+    private Long groupId;
+    private UUID userId;
+    @Schema(description = "role")
+    private String role; // OWNER, ADMIN, MEMBER
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @Schema(description = "joinedAt")
+    private LocalDateTime joinedAt;
+}
